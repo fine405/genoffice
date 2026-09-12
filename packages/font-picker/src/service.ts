@@ -1,12 +1,15 @@
 import { createHash } from 'node:crypto'
 import { createFontClient, type ClientOptions, type CropBox } from '@lens/sdk'
-import type { FontFile, PickerImage } from './types'
+import type { FontFile, FontProgress, PickerImage } from './types'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const MAX_FONT_BYTES = 32 * 1024 * 1024
 
 /** One dialog owns its uploads and candidates; callers cannot fetch arbitrary service resources. */
-export function createPickerSession(options: ClientOptions) {
+export function createPickerSession(
+  options: ClientOptions,
+  onProgress?: (progress: FontProgress) => void,
+) {
   const client = createFontClient(options)
   const controller = new AbortController()
   const images = new Set<string>()
@@ -19,6 +22,7 @@ export function createPickerSession(options: ClientOptions) {
     const cached = files.get(fontId)
     if (cached) return cached
     const request = (async () => {
+      onProgress?.({ fontId, phase: 'preparing', received: 0 })
       const detail = await client.font(fontId, opts)
       if (
         !Number.isInteger(detail.size_bytes) ||
@@ -28,10 +32,12 @@ export function createPickerSession(options: ClientOptions) {
         throw new Error('Font file exceeds the supported size.')
       }
       const response = await client.fontFile(fontId, opts)
+      onProgress?.({ fontId, phase: 'downloading', received: 0, total: detail.size_bytes })
       const reader = response.body?.getReader()
       if (!reader) throw new Error('Empty font response.')
       const chunks: Uint8Array[] = []
       let length = 0
+      let lastPercent = -1
       try {
         while (true) {
           const { done, value } = await reader.read()
@@ -40,11 +46,22 @@ export function createPickerSession(options: ClientOptions) {
           if (length > MAX_FONT_BYTES || length > detail.size_bytes)
             throw new Error('Invalid font file size.')
           chunks.push(value)
+          const percent = Math.floor((length / detail.size_bytes) * 100)
+          if (percent !== lastPercent) {
+            onProgress?.({
+              fontId,
+              phase: 'downloading',
+              received: length,
+              total: detail.size_bytes,
+            })
+            lastPercent = percent
+          }
         }
       } finally {
         await reader.cancel().catch(() => {})
       }
       const bytes = Buffer.concat(chunks)
+      onProgress?.({ fontId, phase: 'verifying', received: length, total: detail.size_bytes })
       if (
         length !== detail.size_bytes ||
         createHash('sha256').update(bytes).digest('hex') !== detail.sha256

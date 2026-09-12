@@ -11,6 +11,12 @@ export interface FontFile {
   font: FontDetails
   bytes: Uint8Array
 }
+export interface FontProgress {
+  fontId: string
+  phase: 'preparing' | 'downloading' | 'verifying'
+  received: number
+  total?: number
+}
 export type PickerRequest =
   | { action: 'upload'; bytes: Uint8Array }
   | { action: 'scan'; imageId: string; crop: CropBox | null }
@@ -20,6 +26,7 @@ export type PickerRequest =
   | { action: 'dispose' }
 export type PickerResult<T> = { ok: true; value: T } | { ok: false; error: string }
 export interface FontPickerApi {
+  onFontProgress?(handler: (progress: FontProgress) => void): () => void
   upload(bytes: Uint8Array): Promise<PickerImage>
   scan(imageId: string, crop: CropBox | null): Promise<ScanResult>
   font(fontId: string): Promise<FontFile>

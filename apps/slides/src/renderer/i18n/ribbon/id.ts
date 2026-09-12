@@ -74,6 +74,8 @@ export const id = {
     'Tambahkan bagian sebelum slide saat ini untuk mengatur presentasi yang panjang',
   ribbonGroupFont: 'Font',
   ribbonFontsSystem: 'Font sistem',
+  ribbonFontsCommon: 'Font umum',
+  ribbonFontsCustom: 'Font kustom',
   ribbonFontsDownloadable: 'Font yang dapat diunduh',
   ribbonFontInstallLocal: 'Instal file font…',
   ribbonFontDownloading: 'Mengunduh…',

@@ -20,7 +20,15 @@
 .font-picker-header,
 .font-picker-footer,
 .font-picker-message {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   flex-shrink: 0;
+}
+.font-picker-message progress {
+  width: 130px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
 }
 .font-picker * {
   box-sizing: border-box;
@@ -38,7 +46,7 @@
   border-radius: 6px;
   padding: 7px 11px;
 }
-.font-picker button:hover:not(:disabled) {
+.font-picker button:not(.font-picker-region):hover:not(:disabled) {
   background: var(--hover);
 }
 .font-picker button:disabled {
@@ -250,6 +258,9 @@
 .font-picker-message.error {
   color: var(--danger);
 }
+.font-picker-message[aria-busy='true'] {
+  color: var(--text-secondary);
+}
 .font-picker-gallery {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -293,6 +304,9 @@
 }
 .font-picker .font-picker-region.selected {
   border-width: 3px;
+}
+.font-picker .font-picker-region:is(:hover, :focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .font-picker-region span {
   position: absolute;

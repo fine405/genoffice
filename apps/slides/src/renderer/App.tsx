@@ -48,6 +48,7 @@ import {
 import { CropOverlay } from './CropOverlay'
 import { createImageLoader } from './image-loader'
 import { syncPrivateFonts } from './doc-fonts'
+import { downloadCatalogFont } from './font-manager'
 import { toPickerHex } from './color-input'
 import { InkOverlay } from './InkOverlay'
 import { inkNodesOf, type InkPenSettings, type InkStroke, type InkTool } from './ink'
@@ -327,7 +328,9 @@ export function App() {
   const downloadMissingFonts = useCallback(async () => {
     setFontBannerBusy(true)
     try {
-      for (const f of missingFonts) await window.slidesApi.fontDownload?.(f)
+      for (const f of missingFonts) {
+        if (!(await downloadCatalogFont(f))) break
+      }
     } finally {
       setFontBannerBusy(false)
       refreshMissingFonts()

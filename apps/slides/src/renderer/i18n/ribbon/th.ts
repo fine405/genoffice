@@ -72,6 +72,8 @@ export const th = {
   ribbonAddSectionTip: 'เพิ่มส่วนก่อนสไลด์ปัจจุบัน (ช่วยจัดระเบียบงานนำเสนอที่ยาว)',
   ribbonGroupFont: 'ฟอนต์',
   ribbonFontsSystem: 'แบบอักษรของระบบ',
+  ribbonFontsCommon: 'แบบอักษรทั่วไป',
+  ribbonFontsCustom: 'แบบอักษรที่กำหนดเอง',
   ribbonFontsDownloadable: 'แบบอักษรที่ดาวน์โหลดได้',
   ribbonFontInstallLocal: 'ติดตั้งไฟล์แบบอักษร…',
   ribbonFontDownloading: 'กำลังดาวน์โหลด…',

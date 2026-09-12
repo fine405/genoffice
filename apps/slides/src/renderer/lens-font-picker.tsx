@@ -5,6 +5,7 @@ import type { DocumentImage, FontPickerApi, PickerRequest } from '@genoffice/fon
 import '@genoffice/font-picker/style.css'
 import type { ActionCtx } from './action-context'
 import { applySelectionFontFace, restoreEditSelection, saveEditSelection } from './TextEditOverlay'
+import { syncPrivateFonts } from './doc-fonts'
 
 async function invoke<T>(request: PickerRequest): Promise<T> {
   const result = await window.slidesApi.fontPicker(request)
@@ -12,10 +13,15 @@ async function invoke<T>(request: PickerRequest): Promise<T> {
   return result.value as T
 }
 const api: FontPickerApi = {
+  onFontProgress: (handler) => window.slidesApi.onFontPickerProgress(handler),
   upload: (bytes) => invoke({ action: 'upload', bytes }),
   scan: (imageId, crop) => invoke({ action: 'scan', imageId, crop }),
   font: (fontId) => invoke({ action: 'font', fontId }),
-  install: (fontId) => invoke({ action: 'install', fontId }),
+  install: async (fontId) => {
+    const family = await invoke<string>({ action: 'install', fontId })
+    await syncPrivateFonts(family)
+    return family
+  },
   download: (fontId) => invoke({ action: 'download', fontId }),
   dispose: () => invoke({ action: 'dispose' }),
 }

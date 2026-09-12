@@ -235,6 +235,7 @@ import {
   initFontStore,
   installLocalFontFiles,
   listFontCatalog,
+  listInstalledUserFonts,
   missingCatalogFonts,
 } from './font-store'
 
@@ -1085,25 +1086,42 @@ export function registerSlidesIpc(): void {
     }
     for (const wc of webContents.getAllWebContents()) wc.send('slides:fonts-changed')
   }
-  registerFontPicker(() => {
+  registerFontPicker((family) => {
     // Keep an active text-edit DOM and its saved selection intact while the picker
     // is open. The subsequent edit lays out with the new metrics.
     resetFontMetrics()
+    getFontMetrics().measure('Aa', {
+      fontFamily: family,
+      fontSizePx: 16,
+      bold: false,
+      italic: false,
+    })
     for (const wc of webContents.getAllWebContents()) wc.send('slides:fonts-changed')
   })
-  ipcMain.handle('slides:font-catalog', () => [
-    ...listFontCatalog(),
-    ...installedLensFonts().map((family) => ({
-      family,
-      script: 'latin' as const,
-      installed: true,
-      downloading: false,
-    })),
-  ])
+  ipcMain.handle('slides:font-catalog', () => {
+    const catalog = listFontCatalog()
+    const custom = new Set([...listInstalledUserFonts(), ...installedLensFonts()])
+    return [
+      ...catalog.filter((font) => !custom.has(font.family)),
+      ...[...custom].sort().map((family) => ({
+        family,
+        script: catalog.find((font) => font.family === family)?.script ?? 'latin',
+        installed: true,
+        downloading: false,
+        custom: true,
+      })),
+    ]
+  })
   ipcMain.handle('slides:font-download', async (_e, family: string) => {
     try {
       await downloadFontFamily(family)
       afterFontsChanged()
+      getFontMetrics().measure('Aa', {
+        fontFamily: family,
+        fontSizePx: 16,
+        bold: false,
+        italic: false,
+      })
       return { ok: true }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }

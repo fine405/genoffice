@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { createPickerSession } from '../src/service'
+import type { FontProgress } from '../src/types'
 
-function backend(tamper = false) {
+function backend(tamper = false, onProgress?: (progress: FontProgress) => void) {
   const bytes = new Uint8Array([0, 1, 0, 0, 4, 5, 6])
   const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
     const path = new URL(String(input)).pathname
@@ -24,15 +25,34 @@ function backend(tamper = false) {
   })
   return {
     fetch,
-    session: createPickerSession({
-      baseUrl: 'https://fonts.test/api/v1',
-      apiKey: 'test-key',
-      fetch,
-    }),
+    session: createPickerSession(
+      {
+        baseUrl: 'https://fonts.test/api/v1',
+        apiKey: 'test-key',
+        fetch,
+      },
+      onProgress,
+    ),
   }
 }
 
 describe('font picker service boundary', () => {
+  it('reports real downloaded bytes and verification separately', async () => {
+    const events: FontProgress[] = []
+    const { session } = backend(false, (event) => events.push(event))
+    const image = await session.upload(new Uint8Array([1]))
+    await session.scan(image.id, null)
+    await session.font('font-a')
+    expect(events).toEqual([
+      { fontId: 'font-a', phase: 'preparing', received: 0 },
+      { fontId: 'font-a', phase: 'downloading', received: 0, total: 7 },
+      { fontId: 'font-a', phase: 'downloading', received: 7, total: 7 },
+      { fontId: 'font-a', phase: 'verifying', received: 7, total: 7 },
+    ])
+    await session.font('font-a')
+    expect(events).toHaveLength(4)
+    await session.dispose()
+  })
   it('aborts pending recognition when the dialog closes and cleans up its image', async () => {
     const { session, fetch } = backend()
     const image = await session.upload(new Uint8Array([1]))

@@ -71,6 +71,8 @@ export const hi = {
     'लंबी प्रस्तुतियों को व्यवस्थित करने के लिए वर्तमान स्लाइड से पहले अनुभाग जोड़ता है',
   ribbonGroupFont: 'फ़ॉन्ट',
   ribbonFontsSystem: 'सिस्टम फ़ॉन्ट',
+  ribbonFontsCommon: 'सामान्य फ़ॉन्ट',
+  ribbonFontsCustom: 'कस्टम फ़ॉन्ट',
   ribbonFontsDownloadable: 'डाउनलोड योग्य फ़ॉन्ट',
   ribbonFontInstallLocal: 'फ़ॉन्ट फ़ाइल इंस्टॉल करें…',
   ribbonFontDownloading: 'डाउनलोड हो रहा है…',

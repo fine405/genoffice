@@ -36,6 +36,13 @@ The picker displays the normalized original, including portions hidden by the
 slide's picture crop. Drag a rectangle over the desired text, then identify it.
 Crop coordinates refer to original image pixels, independent of zoom.
 
+Font preparation, byte download progress, verification and loading are shown
+separately. Adding a font completes only after its document font face has loaded.
+Downloads from the font menu or missing-font banner also show a persistent
+notification until loading succeeds or fails; failed loads can be retried.
+Added, downloaded and locally imported fonts appear under **Custom fonts** at
+the top of the font menu. **Downloadable fonts** only lists uninstalled families.
+
 ## Integration
 
 - `FontPicker`: UI, image crop, candidate and variant selection, actual font

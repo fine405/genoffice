@@ -74,6 +74,8 @@ export const de = {
     'Abschnitt vor der aktuellen Folie hinzufügen (zum Organisieren langer Präsentationen)',
   ribbonGroupFont: 'Schriftart',
   ribbonFontsSystem: 'Systemschriftarten',
+  ribbonFontsCommon: 'Häufige Schriftarten',
+  ribbonFontsCustom: 'Benutzerdefinierte Schriftarten',
   ribbonFontsDownloadable: 'Herunterladbare Schriftarten',
   ribbonFontInstallLocal: 'Schriftdatei installieren…',
   ribbonFontDownloading: 'Wird heruntergeladen…',

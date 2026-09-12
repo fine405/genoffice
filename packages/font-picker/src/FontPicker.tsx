@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { CropBox, DocumentImage, FontFile, FontPickerApi, PickerImage, Region } from './types'
+import type {
+  CropBox,
+  DocumentImage,
+  FontFile,
+  FontPickerApi,
+  FontProgress,
+  PickerImage,
+  Region,
+} from './types'
 import { cropFromPoints, imagePoint, type Point } from './crop'
 import { fontPickerStrings } from './strings'
 import { cssFontStyle } from './font-style'
@@ -28,6 +36,9 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
   const [regionId, setRegionId] = useState('')
   const [fontId, setFontId] = useState('')
   const [fontFile, setFontFile] = useState<FontFile | null>(null)
+  const [fontProgress, setFontProgress] = useState<FontProgress | null>(null)
+  const [fontLoading, setFontLoading] = useState(false)
+  const [fontAttempt, setFontAttempt] = useState(0)
   const [previewFamily, setPreviewFamily] = useState('')
   const [previewText, setPreviewText] = useState(target?.text || 'The quick brown fox')
   const [busy, setBusy] = useState('')
@@ -119,14 +130,29 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
   useEffect(() => {
     const ticket = ++generation.current
     let face: FontFace | undefined
+    let receivingFont = true
+    const unsubscribe = api.onFontProgress?.((progress) => {
+      if (
+        receivingFont &&
+        active.current &&
+        generation.current === ticket &&
+        progress.fontId === fontId
+      )
+        setFontProgress(progress)
+    })
     setFontFile(null)
     setPreviewFamily('')
     setError('')
-    if (!fontId) return
+    setFontLoading(false)
+    setFontProgress(fontId ? { fontId, phase: 'preparing', received: 0 } : null)
+    if (!fontId) return unsubscribe
     void api
       .font(fontId)
       .then(async (file) => {
+        receivingFont = false
         if (!active.current || generation.current !== ticket) return
+        setFontProgress(null)
+        setFontLoading(true)
         const family = `font-picker-${crypto.randomUUID()}`
         face = new FontFace(family, new Uint8Array(file.bytes).buffer, {
           weight: String(file.font.weight),
@@ -137,20 +163,26 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
         document.fonts.add(face)
         setFontFile(file)
         setPreviewFamily(family)
+        setFontLoading(false)
       })
       .catch((e) => {
-        if (active.current && generation.current === ticket)
+        receivingFont = false
+        if (active.current && generation.current === ticket) {
+          setFontProgress(null)
+          setFontLoading(false)
           setError(e instanceof Error ? e.message : t.previewError)
+        }
       })
     return () => {
       // Invalidate pending work using the current counter, not a captured value.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       generation.current++
+      unsubscribe?.()
       if (face) document.fonts.delete(face)
     }
     // Locale changes must not restart a font download.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, fontId])
+  }, [api, fontId, fontAttempt])
 
   function chooseRegion(value: Region) {
     setRegionId(value.id)
@@ -196,6 +228,17 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
     fontWeight: variant?.weight,
     fontStyle: cssFontStyle(variant?.style),
   }
+  const progressText = fontLoading
+    ? t.loadingFont
+    : fontProgress?.phase === 'preparing'
+      ? t.preparingFont
+      : fontProgress?.phase === 'verifying'
+        ? t.verifyingFont
+        : t.downloadingFont
+  const percent =
+    fontProgress?.phase === 'downloading' && fontProgress.total
+      ? Math.floor((fontProgress.received / fontProgress.total) * 100)
+      : undefined
   return (
     <dialog
       ref={dialog}
@@ -427,6 +470,7 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
                     {index === 0 && <small>{t.similar}</small>}
                   </span>
                   <FontSample
+                    key={fontAttempt}
                     api={api}
                     fontId={selected ? fontId : candidate.fonts[0]?.font_id || ''}
                     text={previewText || candidate.name}
@@ -459,13 +503,27 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
           {fontFile && !canInstall && <p className="font-picker-hint">{t.downloadOnly}</p>}
         </section>
       </div>
-      {(error || notice || busy) && (
-        <p
+      {(error || notice || busy || fontProgress || fontLoading) && (
+        <div
           role={error ? 'alert' : 'status'}
+          aria-busy={!error && !!(busy || fontProgress || fontLoading)}
           className={`font-picker-message${error ? ' error' : ''}`}
         >
-          {error || busy || notice}
-        </p>
+          <span>
+            {error ||
+              (fontProgress || fontLoading
+                ? `${variant?.full_name || ''} · ${progressText}${percent === undefined ? '' : ` ${percent}%`}`
+                : busy || notice)}
+          </span>
+          {!error && (busy || fontProgress || fontLoading) && (
+            <progress aria-label={progressText} max={100} value={percent} />
+          )}
+          {error && fontId && !fontFile && (
+            <button disabled={!!busy} onClick={() => setFontAttempt((attempt) => attempt + 1)}>
+              {t.retry}
+            </button>
+          )}
+        </div>
       )}
       <footer className="font-picker-footer">
         <p>{target ? `${t.target}：${target.label}` : t.sourceOnly}</p>
@@ -473,30 +531,30 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
           <button
             disabled={!fontId || !!busy}
             onClick={() =>
-              void run(t.loading, async () => {
+              void run(t.savingFont, async () => {
                 if (await api.download(fontId)) setNotice(t.downloaded)
               })
             }
           >
-            {t.download}
+            {busy === t.savingFont ? t.savingFont : t.download}
           </button>
           <button
             disabled={!canInstall || !!busy}
             onClick={() =>
-              void run(t.loading, async () => {
+              void run(t.installingFont, async () => {
                 await api.install(fontId)
                 setNotice(t.added)
               })
             }
           >
-            {t.add}
+            {busy === t.installingFont ? t.installingFont : t.add}
           </button>
           {target && onApply && (
             <button
               className="font-picker-primary"
               disabled={!canInstall || !!busy}
               onClick={() =>
-                void run(t.loading, async () => {
+                void run(t.applyingFont, async () => {
                   const family = await api.install(fontId)
                   if (!active.current) return
                   // A modal makes the editing surface inert; release it before restoring the selection.
@@ -511,7 +569,7 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
                 })
               }
             >
-              {t.apply}
+              {busy === t.applyingFont ? t.applyingFont : t.apply}
             </button>
           )}
         </div>

@@ -75,6 +75,8 @@ export const ja = {
   // Home: font
   ribbonGroupFont: 'フォント',
   ribbonFontsSystem: 'システムフォント',
+  ribbonFontsCommon: 'よく使うフォント',
+  ribbonFontsCustom: 'カスタムフォント',
   ribbonFontsDownloadable: 'ダウンロード可能なフォント',
   ribbonFontInstallLocal: 'フォントファイルをインストール…',
   ribbonFontDownloading: 'ダウンロード中…',

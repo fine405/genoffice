@@ -71,6 +71,8 @@ export const en = {
   ribbonAddSectionTip: 'Add a section before the current slide to organize long decks',
   ribbonGroupFont: 'Font',
   ribbonFontsSystem: 'System fonts',
+  ribbonFontsCommon: 'Common fonts',
+  ribbonFontsCustom: 'Custom fonts',
   ribbonFontsDownloadable: 'Downloadable fonts',
   ribbonFontInstallLocal: 'Install font file…',
   ribbonFontDownloading: 'Downloading…',

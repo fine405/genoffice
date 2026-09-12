@@ -1,13 +1,41 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { fontPickerStrings } from '@genoffice/font-picker/strings'
+import { getLang } from './i18n/locale'
+import { showToast } from './components/toast-bus'
+import { syncPrivateFonts } from './doc-fonts'
 
 export interface CatalogEntry {
   family: string
   script: 'latin' | 'ja' | 'ko' | 'sc' | 'tc'
   installed: boolean
   downloading: boolean
+  custom?: boolean
 }
 
 let cached: CatalogEntry[] | null = null
+
+/** Shared by the font menu and the missing-font banner; readiness includes canvas loading. */
+export async function downloadCatalogFont(family: string): Promise<boolean> {
+  const labels = fontPickerStrings(getLang())
+  let downloaded = false
+  showToast(`${family} · ${labels.downloadingFont}`, 'loading')
+  try {
+    const result = await window.slidesApi.fontDownload?.(family)
+    if (!result?.ok) throw new Error(result?.error)
+    downloaded = true
+    showToast(`${family} · ${labels.loadingFont}`, 'loading')
+    await syncPrivateFonts(family)
+    showToast(`${family} · ${labels.fontReady}`)
+    return true
+  } catch (error) {
+    const message = downloaded ? labels.fontLoadFailed : labels.fontDownloadFailed
+    showToast(
+      `${family} · ${message}${error instanceof Error && error.message ? ` ${error.message}` : ''}`,
+      'error',
+    )
+    return false
+  }
+}
 
 /**
  * Downloadable font catalog + install actions. Loaded lazily from the picker's
@@ -25,6 +53,7 @@ export function useFontCatalog(): {
   const [catalog, setCatalog] = useState<CatalogEntry[]>(cached ?? [])
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set())
   const [failed, setFailed] = useState<ReadonlySet<string>>(new Set())
+  const pending = useRef(new Set<string>())
 
   const load = useCallback(() => {
     void window.slidesApi
@@ -38,6 +67,8 @@ export function useFontCatalog(): {
 
   const download = useCallback(
     async (family: string): Promise<boolean> => {
+      if (pending.current.has(family)) return false
+      pending.current.add(family)
       setBusy((s) => new Set(s).add(family))
       setFailed((s) => {
         const n = new Set(s)
@@ -45,13 +76,11 @@ export function useFontCatalog(): {
         return n
       })
       try {
-        const r = await window.slidesApi.fontDownload?.(family)
-        if (!r?.ok) throw new Error(r?.error)
-        return true
-      } catch {
-        setFailed((s) => new Set(s).add(family))
-        return false
+        const ok = await downloadCatalogFont(family)
+        if (!ok) setFailed((s) => new Set(s).add(family))
+        return ok
       } finally {
+        pending.current.delete(family)
         setBusy((s) => {
           const n = new Set(s)
           n.delete(family)

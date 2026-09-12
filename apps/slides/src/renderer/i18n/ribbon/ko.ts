@@ -75,6 +75,8 @@ export const ko = {
   // Home: font
   ribbonGroupFont: '글꼴',
   ribbonFontsSystem: '시스템 글꼴',
+  ribbonFontsCommon: '자주 쓰는 글꼴',
+  ribbonFontsCustom: '사용자 지정 글꼴',
   ribbonFontsDownloadable: '다운로드 가능한 글꼴',
   ribbonFontInstallLocal: '글꼴 파일 설치…',
   ribbonFontDownloading: '다운로드 중…',

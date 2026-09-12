@@ -23,6 +23,7 @@ export function ToastHost() {
       raf = window.requestAnimationFrame(() => {
         raf = window.requestAnimationFrame(() => setVisible(true))
       })
+      if (next.kind === 'loading') return
       const shownMs = next.kind === 'error' ? 4000 : 2000
       hideTimer = window.setTimeout(() => setVisible(false), shownMs)
       // keep the node mounted through the fade-out transition
@@ -48,7 +49,9 @@ export function ToastHost() {
         strokeLinejoin="round"
         aria-hidden
       >
-        {toast.kind === 'success' ? (
+        {toast.kind === 'loading' ? (
+          <circle cx="12" cy="12" r="9" strokeDasharray="40 16" />
+        ) : toast.kind === 'success' ? (
           <>
             <circle cx="12" cy="12" r="9" />
             <path d="m8.2 12.3 2.6 2.6 5-5" />

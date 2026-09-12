@@ -71,6 +71,8 @@ export const cs = {
   ribbonAddSectionTip: 'Přidá oddíl před aktuální snímek pro uspořádání dlouhých prezentací',
   ribbonGroupFont: 'Písmo',
   ribbonFontsSystem: 'Systémová písma',
+  ribbonFontsCommon: 'Běžná písma',
+  ribbonFontsCustom: 'Vlastní písma',
   ribbonFontsDownloadable: 'Písma ke stažení',
   ribbonFontInstallLocal: 'Instalovat soubor písma…',
   ribbonFontDownloading: 'Stahování…',

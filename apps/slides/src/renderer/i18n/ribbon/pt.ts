@@ -73,6 +73,8 @@ export const pt = {
     'Adiciona uma seção antes do slide atual para organizar apresentações longas',
   ribbonGroupFont: 'Fonte',
   ribbonFontsSystem: 'Fontes do sistema',
+  ribbonFontsCommon: 'Fontes comuns',
+  ribbonFontsCustom: 'Fontes personalizadas',
   ribbonFontsDownloadable: 'Fontes para download',
   ribbonFontInstallLocal: 'Instalar arquivo de fonte…',
   ribbonFontDownloading: 'Baixando…',

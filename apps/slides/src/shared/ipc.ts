@@ -1,4 +1,4 @@
-import type { PickerRequest, PickerResult } from '@genoffice/font-picker/types'
+import type { FontProgress, PickerRequest, PickerResult } from '@genoffice/font-picker/types'
 import type { AiPanelPrefs } from '@genoffice/ui'
 /**
  * slides main-process <-> renderer IPC contract (Phase 3: open/save/edit, AI not included yet).
@@ -1210,6 +1210,7 @@ export interface SlidesApi {
       script: 'latin' | 'ja' | 'ko' | 'sc' | 'tc'
       installed: boolean
       downloading: boolean
+      custom?: boolean
     }>
   >
   /** Download a catalog family into the user font store; layouts refresh via deck-changed */
@@ -1217,6 +1218,7 @@ export interface SlidesApi {
   /** File picker → install local font files into the user font store */
   fontInstallLocal: () => Promise<{ families: string[] }>
   fontPicker: (request: PickerRequest) => Promise<PickerResult<unknown>>
+  onFontPickerProgress: (handler: (progress: FontProgress) => void) => () => void
   /** Families this deck references that are missing locally but downloadable */
   fontMissing: () => Promise<string[]>
   /** The user font store changed (download/local install): re-sync private FontFaces */

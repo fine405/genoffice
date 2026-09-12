@@ -76,6 +76,8 @@ export const es = {
     'Agregar una sección antes de la diapositiva actual para organizar presentaciones largas',
   ribbonGroupFont: 'Fuente',
   ribbonFontsSystem: 'Fuentes del sistema',
+  ribbonFontsCommon: 'Fuentes habituales',
+  ribbonFontsCustom: 'Fuentes personalizadas',
   ribbonFontsDownloadable: 'Fuentes descargables',
   ribbonFontInstallLocal: 'Instalar archivo de fuente…',
   ribbonFontDownloading: 'Descargando…',

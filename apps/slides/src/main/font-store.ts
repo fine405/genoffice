@@ -8,7 +8,15 @@
  * immediately drives both layout metrics and canvas drawing.
  */
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  copyFileSync,
+  readdirSync,
+  statSync,
+} from 'node:fs'
 import { basename, join } from 'node:path'
 import { app, net } from 'electron'
 import type { OpenedPptx } from '@genoffice/pptx-engine'
@@ -59,6 +67,33 @@ export function fontStoreDir(): string {
 /** Wire the store dir into the font registry; call once at startup. */
 export function initFontStore(): void {
   setUserFontDir(fontStoreDir())
+}
+
+const localFamilyCache = new Map<string, { signature: string; families: string[] }>()
+
+/** Private fonts must stay discoverable even when no catalog CDN is configured. */
+export function listInstalledUserFonts(): string[] {
+  const dir = fontStoreDir()
+  if (!existsSync(dir)) return []
+  const families = new Set<string>()
+  for (const name of readdirSync(dir)) {
+    if (!/\.(ttf|otf|ttc|otc)$/i.test(name)) continue
+    const path = join(dir, name)
+    try {
+      const stat = statSync(path)
+      if (!stat.isFile()) continue
+      const signature = `${stat.mtimeMs}:${stat.size}`
+      let cached = localFamilyCache.get(path)
+      if (cached?.signature !== signature) {
+        cached = { signature, families: fontFileFamilies(path) }
+        localFamilyCache.set(path, cached)
+      }
+      for (const family of cached.families) families.add(family)
+    } catch {
+      // A removed or unreadable file should not prevent the font menu from opening.
+    }
+  }
+  return [...families].sort()
 }
 
 const downloading = new Map<string, Promise<void>>()

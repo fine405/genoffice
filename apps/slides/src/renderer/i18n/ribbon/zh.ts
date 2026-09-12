@@ -71,6 +71,8 @@ export const zh = {
   // Home: font
   ribbonGroupFont: '字体',
   ribbonFontsSystem: '系统字体',
+  ribbonFontsCommon: '常用字体',
+  ribbonFontsCustom: '自定义字体',
   ribbonFontsDownloadable: '可下载字体',
   ribbonFontInstallLocal: '安装字体文件…',
   ribbonFontDownloading: '下载中…',

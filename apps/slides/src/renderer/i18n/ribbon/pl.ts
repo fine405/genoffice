@@ -73,6 +73,8 @@ export const pl = {
     'Dodaje sekcję przed bieżącym slajdem, aby ułatwić organizację długich prezentacji',
   ribbonGroupFont: 'Czcionka',
   ribbonFontsSystem: 'Czcionki systemowe',
+  ribbonFontsCommon: 'Popularne czcionki',
+  ribbonFontsCustom: 'Czcionki niestandardowe',
   ribbonFontsDownloadable: 'Czcionki do pobrania',
   ribbonFontInstallLocal: 'Zainstaluj plik czcionki…',
   ribbonFontDownloading: 'Pobieranie…',

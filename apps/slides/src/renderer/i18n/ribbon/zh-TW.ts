@@ -67,6 +67,8 @@ export const zhTW = {
   ribbonAddSectionTip: '新增章節（在目前頁前分節，便於組織長簡報）',
   ribbonGroupFont: '字型',
   ribbonFontsSystem: '系統字型',
+  ribbonFontsCommon: '常用字型',
+  ribbonFontsCustom: '自訂字型',
   ribbonFontsDownloadable: '可下載字型',
   ribbonFontInstallLocal: '安裝字型檔案…',
   ribbonFontDownloading: '下載中…',

@@ -17,7 +17,7 @@ vi.mock('../src/main/fonts', () => ({
   familyAvailable: (f: string) => availability.get(f) ?? false,
   fontFileFamilies: (p: string) => {
     // The magic gate runs before this; tests hand-label families per path
-    return p.includes('brand') ? ['Brand Sans'] : ['Test Family']
+    return p.toLowerCase().includes('brand') ? ['Brand Sans'] : ['Test Family']
   },
   setUserFontDir: vi.fn(),
 }))
@@ -28,6 +28,7 @@ import {
   extractFontCdnBaseUrl,
   installLocalFontFiles,
   listFontCatalog,
+  listInstalledUserFonts,
   missingCatalogFonts,
 } from '../src/main/font-store'
 import { net } from 'electron'
@@ -145,6 +146,11 @@ describe('installLocalFontFiles', () => {
     const families = installLocalFontFiles([src, junk])
     expect(families).toEqual(['Brand Sans'])
     expect(existsSync(join(storeDir, 'fonts', 'Brand Sans.ttf'))).toBe(true)
+    vi.stubEnv('GENOFFICE_FONT_CDN_URL', '')
+    expect(listInstalledUserFonts()).toContain('Brand Sans')
+    // Multiple style files still contribute only one menu entry.
+    writeFileSync(join(storeDir, 'fonts', 'Brand Sans-bold.ttf'), readFileSync(src))
+    expect(listInstalledUserFonts().filter((family) => family === 'Brand Sans')).toHaveLength(1)
   })
 })
 

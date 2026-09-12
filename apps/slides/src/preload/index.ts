@@ -125,6 +125,12 @@ const api: SlidesApi = {
   privateFontFaces: () => ipcRenderer.invoke('slides:private-font-faces'),
   privateFontData: (id) => ipcRenderer.invoke('slides:private-font-data', id),
   fontPicker: (request) => ipcRenderer.invoke('slides:font-picker', request),
+  onFontPickerProgress: (handler) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: Parameters<typeof handler>[0]) =>
+      handler(progress)
+    ipcRenderer.on('slides:font-picker-progress', listener)
+    return () => ipcRenderer.removeListener('slides:font-picker-progress', listener)
+  },
   fontCatalog: () => ipcRenderer.invoke('slides:font-catalog'),
   fontDownload: (family) => ipcRenderer.invoke('slides:font-download', family),
   fontInstallLocal: () => ipcRenderer.invoke('slides:font-install-local'),

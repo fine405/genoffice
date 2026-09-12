@@ -46,9 +46,10 @@ async function openPicker(page: Page) {
   await page.getByRole('button', { name: 'Find font from image…', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
 }
-async function scan(page: Page) {
+async function scan(page: Page, duringDownload?: () => Promise<void>) {
   await page.getByRole('button', { name: 'Identify font', exact: true }).click()
   await expect(page.locator('.font-picker-match')).toHaveCount(1)
+  await duringDownload?.()
   await expect(page.getByRole('button', { name: 'Add to GenOffice', exact: true })).toBeEnabled()
 }
 async function savedXml(page: Page, path: string) {
@@ -69,6 +70,9 @@ test('font picker imports document regions, installs actual fonts, applies, undo
   )
   const { path, dir } = await fixture(image)
   const scans: unknown[] = []
+  let releaseFontDownload: (() => void) | undefined
+  let delayFirstFont = true
+  let fontDownloads = 0
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = []
     for await (const chunk of req) chunks.push(Buffer.from(chunk))
@@ -137,7 +141,18 @@ test('font picker imports document regions, installs actual fonts, applies, undo
       return
     }
     if (route === '/api/v1/fonts/carlito-regular/file') {
+      fontDownloads++
       res.setHeader('Content-Type', 'font/ttf')
+      if (delayFirstFont) {
+        delayFirstFont = false
+        const split = Math.floor(bytes.length / 4)
+        res.write(bytes.subarray(0, split))
+        await new Promise<void>((resolve) => {
+          releaseFontDownload = resolve
+        })
+        res.end(bytes.subarray(split))
+        return
+      }
       res.end(bytes)
       return
     }
@@ -167,8 +182,29 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     await page.mouse.down()
     await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 8 })
     await page.mouse.up()
-    await scan(page)
+    await scan(page, async () => {
+      const percent = Math.floor((Math.floor(bytes.length / 4) / bytes.length) * 100)
+      await expect(page.getByRole('status')).toContainText(`Downloading font… ${percent}%`)
+      await expect(page.getByRole('progressbar')).toHaveAttribute('value', String(percent))
+      await expect(
+        page.getByRole('button', { name: 'Add to GenOffice', exact: true }),
+      ).toBeDisabled()
+      await page.screenshot({ path: screenshotPath('font-picker-download-progress') })
+      expect(fontDownloads).toBe(1)
+      releaseFontDownload!()
+    })
     expect(scans[0]).toMatchObject({ crop_box: { left: 205, top: 205, width: 512, height: 512 } })
+    // A delayed IPC progress event must not replace readiness with a stale spinner.
+    await launched.app.evaluate(({ webContents }) => {
+      for (const contents of webContents.getAllWebContents()) {
+        if (contents.getURL().includes('slides/out'))
+          contents.send('slides:font-picker-progress', {
+            fontId: 'carlito-regular',
+            phase: 'verifying',
+            received: 1,
+          })
+      }
+    })
     const downloadPath = join(dir, 'download.ttf')
     await launched.app.evaluate(({ dialog }, destination) => {
       dialog.showSaveDialog = (async () => ({
@@ -186,6 +222,16 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     await page.screenshot({ path: screenshotPath('font-picker-dark') })
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'))
     await page.getByRole('button', { name: 'Close', exact: true }).click()
+    await page.locator('.rb-font-name button').click()
+    await expect(
+      page
+        .getByRole('group', { name: 'Custom fonts', exact: true })
+        .getByRole('button', { name: 'Lens Test Regular', exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.locator('.rb-font-menu').getByRole('button', { name: 'Lens Test Regular', exact: true }),
+    ).toHaveCount(1)
+    await page.locator('.rb-font-name button').click()
     const stage = (await page.locator('.stage-rel').boundingBox())!
     // The fixture is 13 1/3 inches wide, with its title at (1 in, 1 in).
     const scale = stage.width / 1280
@@ -251,6 +297,20 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     await page.keyboard.press('Meta+Shift+z')
     expect(await savedXml(page, path)).toContain('typeface="Lens Test Regular"')
     const userDataDir = launched.userDataDir
+    await launched.app.evaluate(
+      ({ dialog }, source) => {
+        dialog.showOpenDialog = (async () => ({
+          canceled: false,
+          filePaths: [source],
+        })) as typeof dialog.showOpenDialog
+      },
+      resolve(__dirname, '../packages/ui/src/fonts/Carlito-Regular.ttf'),
+    )
+    expect(
+      await page.evaluate(() =>
+        (window as unknown as { slidesApi: SlidesApi }).slidesApi.fontInstallLocal(),
+      ),
+    ).toEqual({ families: ['Carlito GO'] })
     await closeAndSaveVideo(launched, 'slides-font-picker')
     launched = await launchShell({
       userDataDir,
@@ -264,11 +324,37 @@ test('font picker imports document regions, installs actual fonts, applies, undo
       const api = (window as unknown as { slidesApi: SlidesApi }).slidesApi
       return { catalog: await api.fontCatalog(), faces: await api.privateFontFaces() }
     })
-    expect(available.catalog.some((f) => f.family === 'Lens Test Regular' && f.installed)).toBe(
-      true,
-    )
+    expect(
+      available.catalog.some((f) => f.family === 'Lens Test Regular' && f.installed && f.custom),
+    ).toBe(true)
     expect(available.faces.some((f) => f.family === 'Lens Test Regular')).toBe(true)
+    await page.locator('.rb-font-name button').click()
+    const customFonts = page.getByRole('group', { name: 'Custom fonts', exact: true })
+    const arial = (await page
+      .locator('.rb-font-menu')
+      .getByRole('button', { name: 'Arial', exact: true })
+      .boundingBox())!
+    const times = (await page
+      .locator('.rb-font-menu')
+      .getByRole('button', { name: 'Times New Roman', exact: true })
+      .boundingBox())!
+    expect(times.y).toBeGreaterThanOrEqual(arial.y + arial.height)
+    expect(times.x).toBe(arial.x)
+    await expect(
+      customFonts.getByRole('button', { name: 'Lens Test Regular', exact: true }),
+    ).toBeVisible()
+    await expect(customFonts.getByRole('button', { name: 'Carlito GO', exact: true })).toBeVisible()
+    await expect(
+      page.locator('.rb-font-menu').getByRole('button', { name: 'Carlito GO', exact: true }),
+    ).toHaveCount(1)
+    await expect(
+      page
+        .getByRole('group', { name: 'Downloadable fonts', exact: true })
+        .getByRole('button', { name: /Carlito|Lens Test Regular/ }),
+    ).toHaveCount(0)
+    await page.screenshot({ path: screenshotPath('font-picker-custom-fonts') })
   } finally {
+    releaseFontDownload?.()
     await closeAndSaveVideo(launched, 'slides-font-picker-final')
     server.close()
     if (previousUrl === undefined) delete process.env.GENOFFICE_FONT_SERVICE_URL

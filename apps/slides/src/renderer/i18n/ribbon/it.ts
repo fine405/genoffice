@@ -74,6 +74,8 @@ export const it = {
     'Aggiunge una sezione prima della diapositiva corrente per organizzare presentazioni lunghe',
   ribbonGroupFont: 'Carattere',
   ribbonFontsSystem: 'Caratteri di sistema',
+  ribbonFontsCommon: 'Caratteri comuni',
+  ribbonFontsCustom: 'Caratteri personalizzati',
   ribbonFontsDownloadable: 'Caratteri scaricabili',
   ribbonFontInstallLocal: 'Installa file di carattere…',
   ribbonFontDownloading: 'Download in corso…',

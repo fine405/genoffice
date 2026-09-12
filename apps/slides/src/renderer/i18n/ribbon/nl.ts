@@ -73,6 +73,8 @@ export const nl = {
   ribbonAddSectionTip: 'Voegt een sectie toe vóór de huidige dia om lange presentaties te ordenen',
   ribbonGroupFont: 'Lettertype',
   ribbonFontsSystem: 'Systeemlettertypen',
+  ribbonFontsCommon: 'Veelgebruikte lettertypen',
+  ribbonFontsCustom: 'Aangepaste lettertypen',
   ribbonFontsDownloadable: 'Downloadbare lettertypen',
   ribbonFontInstallLocal: 'Lettertypebestand installeren…',
   ribbonFontDownloading: 'Downloaden…',

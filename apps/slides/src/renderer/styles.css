@@ -4505,6 +4505,12 @@ body.vib .slide-list {
   min-width: 180px;
 }
 
+.rb-font-menu .rb-menu-scroll,
+.rb-font-menu [role='group'] {
+  display: flex;
+  flex-direction: column;
+}
+
 .rb-size-menu {
   min-width: 64px;
 }
@@ -8868,6 +8874,19 @@ body.show-curtain::after {
 
 .app-toast.success .app-toast-icon {
   color: var(--slides-toast-ok);
+}
+.app-toast.loading .app-toast-icon {
+  animation: font-download-spin 1s linear infinite;
+}
+@keyframes font-download-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-toast.loading .app-toast-icon {
+    animation: none;
+  }
 }
 
 /* body row (AI dock + content column) — the status bar spans only the content

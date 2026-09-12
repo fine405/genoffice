@@ -82,17 +82,22 @@ export function installLensFont({ font, bytes }: FontFile): string {
   return family
 }
 
-export function registerFontPicker(afterFontsChanged: () => void): void {
+export function registerFontPicker(afterFontsChanged: (family: string) => void): void {
   setLensFontDir(lensFontDir())
   const sessions = new Map<number, ReturnType<typeof createPickerSession>>()
   const watched = new Set<number>()
   function getSession(sender: WebContents) {
     let session = sessions.get(sender.id)
     if (!session) {
-      session = createPickerSession({
-        baseUrl: fontServiceUrl(),
-        apiKey: process.env.GENOFFICE_FONT_SERVICE_API_KEY,
-      })
+      session = createPickerSession(
+        {
+          baseUrl: fontServiceUrl(),
+          apiKey: process.env.GENOFFICE_FONT_SERVICE_API_KEY,
+        },
+        (progress) => {
+          if (!sender.isDestroyed()) sender.send('slides:font-picker-progress', progress)
+        },
+      )
       sessions.set(sender.id, session)
       if (!watched.has(sender.id)) {
         const id = sender.id
@@ -128,7 +133,7 @@ export function registerFontPicker(afterFontsChanged: () => void): void {
             return { ok: true, value: await session.font(request.fontId) }
           case 'install': {
             const family = installLensFont(await session.font(request.fontId))
-            afterFontsChanged()
+            afterFontsChanged(family)
             return { ok: true, value: family }
           }
           case 'download': {
