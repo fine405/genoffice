@@ -885,6 +885,8 @@ export function extractParagraphs(root: HTMLElement, norm: number): EditParagrap
       next.bold = true
     if (style.fontStyle === 'italic' || el.tagName === 'I' || el.tagName === 'EM')
       next.italic = true
+    if (style.fontWeight === 'normal') next.bold = false
+    if (style.fontStyle === 'normal') next.italic = false
     if ((style.textDecoration || cs.textDecorationLine).includes('underline') || el.tagName === 'U')
       next.underline = true
     if (
@@ -1222,6 +1224,41 @@ export function applySelectionFontFamily(family: string): void {
     if (s.style.fontFamily && firstFontFamily(s.style.fontFamily) === family)
       s.style.fontFamily = displayFontFamily(family)
   })
+}
+
+/** Apply a downloaded static face without execCommand stripping adjacent source-font metadata. */
+export function applySelectionFontFace(family: string): boolean {
+  const root = document.activeElement
+  const selection = window.getSelection()
+  if (!(root instanceof HTMLElement) || !root.isContentEditable || !selection?.rangeCount)
+    return false
+  const selected = selection.getRangeAt(0).cloneRange()
+  if (!root.contains(selected.commonAncestorContainer)) return false
+  // A caret without a range targets the current text box, as shown by the picker preview.
+  if (selected.collapsed) selected.selectNodeContents(root)
+  releaseFragmentsAtEdit(root, [selected])
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  const ranges: Range[] = []
+  let node: Node | null
+  while ((node = walker.nextNode())) {
+    if (!selected.intersectsNode(node)) continue
+    const start = node === selected.startContainer ? selected.startOffset : 0
+    const end = node === selected.endContainer ? selected.endOffset : node.textContent!.length
+    if (start === end) continue
+    const range = document.createRange()
+    range.setStart(node, start)
+    range.setEnd(node, end)
+    ranges.push(range)
+  }
+  for (const range of ranges.reverse()) {
+    const span = document.createElement('span')
+    span.style.fontFamily = displayFontFamily(family)
+    // Weight and slant are already part of the chosen static face.
+    span.style.fontWeight = 'normal'
+    span.style.fontStyle = 'normal'
+    range.surroundContents(span)
+  }
+  return ranges.length > 0
 }
 
 /** Set an absolute font size (pt) on the selection while editing: fontSize=7 placeholder then replaced by a px span (same as resizeSelectionFont). */

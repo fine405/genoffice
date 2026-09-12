@@ -39,6 +39,8 @@ export default defineConfig({
     plugins: [
       externalizeDepsPlugin({
         exclude: [
+          '@genoffice/font-picker',
+          '@lens/sdk',
           '@genoffice/pptx-engine',
           '@genoffice/pptx-render',
           '@genoffice/ai-search',

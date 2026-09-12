@@ -1,3 +1,4 @@
+import { fontPickerStrings } from '@genoffice/font-picker/strings'
 /**
  * Context-menu item builder extracted from App.tsx. Builds the
  * thumbnail/section/canvas/element menus from the latest App state (ActionCtx);
@@ -16,7 +17,7 @@ import * as pictureEditActions from './picture-edit-actions'
 import * as styleActions from './style-actions'
 import * as tableActions from './table-actions'
 import { TABLE_SHADING_COLORS } from './components/table-shading-colors'
-import { t } from './i18n/locale'
+import { t, getLang } from './i18n/locale'
 
 export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
   const { ctxMenu, slides, sections, selectedIds, slide, current } = ctx
@@ -350,6 +351,10 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
           } as CtxItem,
           ...(!(node as PictureRenderNode).media
             ? [
+                {
+                  label: fontPickerStrings(getLang()).pictureEntry,
+                  onClick: () => ctx.openFontPicker(ctxMenu.targetId),
+                } as CtxItem,
                 {
                   label: t('appCtxRemoveBackground'),
                   onClick: () => pictureEditActions.startCutout(ctx),

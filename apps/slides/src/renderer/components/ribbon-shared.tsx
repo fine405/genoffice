@@ -397,6 +397,7 @@ export interface Props {
   /** Effective base direction of the selection's paragraphs (null = mixed/no text, nothing highlighted) */
   curRtl: boolean | null
   /** Editing: change the selection's font / set size (pt) */
+  onFindFont: () => void
   onFontFamily: (family: string) => void
   onFontSize: (pt: number) => void
   /** Paragraph alignment: execCommand while editing, element-level op when elements are selected */
@@ -639,6 +640,7 @@ export interface RibbonTabCtx extends Pick<
   | 'onCut'
   | 'onElementTextColor'
   | 'onFindReplace'
+  | 'onFindFont'
   | 'onFontFamily'
   | 'onFontSize'
   | 'onFormat'

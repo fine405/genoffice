@@ -1,3 +1,4 @@
+import { registerFontPicker, installedLensFonts } from './font-picker'
 /**
  * GenOffice Slides main process — pptx parsing/render-tree building/edit application/saving all live
  * here (Node side). The renderer only gets plain-data RenderSlide; edit intents are sent back
@@ -1084,7 +1085,21 @@ export function registerSlidesIpc(): void {
     }
     for (const wc of webContents.getAllWebContents()) wc.send('slides:fonts-changed')
   }
-  ipcMain.handle('slides:font-catalog', () => listFontCatalog())
+  registerFontPicker(() => {
+    // Keep an active text-edit DOM and its saved selection intact while the picker
+    // is open. The subsequent edit lays out with the new metrics.
+    resetFontMetrics()
+    for (const wc of webContents.getAllWebContents()) wc.send('slides:fonts-changed')
+  })
+  ipcMain.handle('slides:font-catalog', () => [
+    ...listFontCatalog(),
+    ...installedLensFonts().map((family) => ({
+      family,
+      script: 'latin' as const,
+      installed: true,
+      downloading: false,
+    })),
+  ])
   ipcMain.handle('slides:font-download', async (_e, family: string) => {
     try {
       await downloadFontFamily(family)

@@ -202,5 +202,6 @@ export interface ActionCtx {
   /** Open the format pane for the selection (element context menu entry) */
   openFormat: () => void
   /** Open the "Change Shape" gallery popover for a shape (context menu entry) */
+  openFontPicker: (pictureId?: string) => void
   openChangeShape: (targetId: string, x: number, y: number) => void
 }

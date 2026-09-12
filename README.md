@@ -273,6 +273,10 @@ The sheets app additionally needs a Rust toolchain for its xlsx sidecar
 automatically. See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks every
 change must pass and how pull requests land.
 
+Slides also includes an optional Lens image font picker. Start its separate
+Python service, then use the font dropdown or a picture's context menu. See
+[font picker setup and limitations](packages/font-picker/README.md).
+
 ## Community
 
 GenOffice is in active development and your feedback shapes it.

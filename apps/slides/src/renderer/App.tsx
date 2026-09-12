@@ -1,3 +1,4 @@
+import { useLensFontPicker } from './lens-font-picker'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   GroupRenderNode,
@@ -348,6 +349,7 @@ export function App() {
   const [drawKind, setDrawKind] = useState<InsertKind | null>(null)
   /** Latest-state bundle for the extracted action modules; refreshed every render (see action-context.ts). */
   const ctxRef = useRef<ActionCtx>(null as unknown as ActionCtx)
+  const fontPicker = useLensFontPicker(ctxRef, lang)
   const [zoom, setZoom] = useState(1)
   /** unscaled layout size of .stage-scale — its transform-scaled visual size is
    * scaleBox * zoom, which the wrapper zoom-box adopts so scrolling can reach it all */
@@ -2771,6 +2773,7 @@ export function App() {
     onTransform,
     openBgFormat,
     openFormat,
+    openFontPicker: fontPicker.open,
     openChangeShape: (targetId, x, y) => setShapeGalleryAt({ targetId, x, y }),
   }
 
@@ -2812,6 +2815,7 @@ export function App() {
   return (
     <div className="app">
       <ToastHost />
+      {fontPicker.dialog}
       <Ribbon
         hasDoc={!!slide}
         deckEmpty={deckEmpty}
@@ -2914,6 +2918,7 @@ export function App() {
         curFontSizePt={fontStatus?.sizePt ?? null}
         curFontSizeMixed={fontStatus?.sizeMixed ?? false}
         onFontFamily={onFontFamily}
+        onFindFont={() => fontPicker.open()}
         onFontSize={onFontSize}
         onInsertTable={(rows, cols) => void insertTable(rows, cols)}
         transition={transition}

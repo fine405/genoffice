@@ -124,6 +124,7 @@ const api: SlidesApi = {
   setShowFullScreen: (on) => ipcRenderer.invoke('slides:show-fullscreen', on),
   privateFontFaces: () => ipcRenderer.invoke('slides:private-font-faces'),
   privateFontData: (id) => ipcRenderer.invoke('slides:private-font-data', id),
+  fontPicker: (request) => ipcRenderer.invoke('slides:font-picker', request),
   fontCatalog: () => ipcRenderer.invoke('slides:font-catalog'),
   fontDownload: (family) => ipcRenderer.invoke('slides:font-download', family),
   fontInstallLocal: () => ipcRenderer.invoke('slides:font-install-local'),

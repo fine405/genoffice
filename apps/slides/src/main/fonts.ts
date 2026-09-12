@@ -15,7 +15,7 @@
  *     return undefined (callers use heuristic metrics).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import { homedir, tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import * as opentype from 'opentype.js'
@@ -55,6 +55,10 @@ const BUNDLED_FONTS: Record<string, string> = {
  * to Chromium, so faces resolved from here get the same private FontFace treatment as
  * Office DFonts.
  */
+let lensFontDir: string | null = null
+export function setLensFontDir(dir: string): void {
+  lensFontDir = dir
+}
 let userFontDir: string | null = null
 export function setUserFontDir(dir: string): void {
   userFontDir = dir
@@ -634,6 +638,10 @@ class FontRegistry {
       this.privateDirs.push(userFontDir)
       this.scanFlatDir(userFontDir)
     }
+    if (lensFontDir) {
+      this.privateDirs.push(lensFontDir)
+      this.scanFlatDir(lensFontDir)
+    }
     for (const dir of officeFontDirs()) {
       this.privateDirs.push(dir)
       this.scanFlatDir(dir)
@@ -1176,6 +1184,11 @@ export function createSystemFontMetrics(): FontMetricsProvider {
           offset: raw.offset,
         })
       }
+    }
+    // Downloaded static faces use their full names so Medium/SemiBold variants
+    // have independent CSS registrations and survive Office save/reopen.
+    if (raw && lensFontDir && raw.path.startsWith(lensFontDir + sep)) {
+      raw.family = style.fontFamily
     }
     if (raw && registry.isPrivate(raw.path)) {
       // Register under the requested style only when this style resolved to its own face —

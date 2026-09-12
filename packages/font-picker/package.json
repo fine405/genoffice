@@ -1,0 +1,31 @@
+{
+  "name": "@genoffice/font-picker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/FontPicker.tsx",
+    "./types": "./src/types.ts",
+    "./service": "./src/service.ts",
+    "./crop": "./src/crop.ts",
+    "./strings": "./src/strings.ts",
+    "./style.css": "./src/style.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lens/sdk": "file:../../vendor/lens-sdk-0.1.1.tgz"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "license": "Apache-2.0"
+}
