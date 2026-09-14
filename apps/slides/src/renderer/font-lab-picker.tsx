@@ -78,7 +78,7 @@ function nodeText(node: RenderNode): string {
   return ''
 }
 
-export function useLensFontPicker(ctxRef: RefObject<ActionCtx>, lang: string) {
+export function useFontLabPicker(ctxRef: RefObject<ActionCtx>, lang: string) {
   const [state, setState] = useState<{
     images: DocumentImage[]
     initialImage?: DocumentImage

@@ -1,4 +1,4 @@
-/** Slides adapter for the independent Lens client. Credentials never cross the preload bridge. */
+/** Slides adapter for the Font Lab SDK. Credentials never cross the preload bridge. */
 import { app, dialog, ipcMain } from 'electron'
 import type { WebContents } from 'electron'
 import { createHash } from 'node:crypto'
@@ -8,12 +8,12 @@ import * as opentype from 'opentype.js'
 import { createPickerSession } from '@genoffice/font-picker/service'
 import type { FontFile, PickerRequest, PickerResult } from '@genoffice/font-picker/types'
 import { showSaveDialogWithMemory } from '@genoffice/electron-utils'
-import { setLensFontDir } from './fonts'
+import { setFontLabDir } from './fonts'
 
-export const lensFontDir = (): string => join(app.getPath('userData'), 'fonts', 'lens')
-export function installedLensFonts(): string[] {
+export const fontLabDir = (): string => join(app.getPath('userData'), 'fonts', 'font-lab')
+export function installedFontLabFonts(): string[] {
   try {
-    return readdirSync(lensFontDir())
+    return readdirSync(fontLabDir())
       .filter((name) => /\.(ttf|otf)$/.test(name))
       .map((name) => name.replace(/\.[^.]+$/, ''))
   } catch {
@@ -21,7 +21,7 @@ export function installedLensFonts(): string[] {
   }
 }
 export function fontServiceUrl(
-  value = process.env.GENOFFICE_FONT_SERVICE_URL || 'http://127.0.0.1:8000/api/v1',
+  value = process.env.GENOFFICE_FONT_LAB_URL || 'http://127.0.0.1:8100/api/v1',
 ): string {
   const url = new URL(value)
   if (
@@ -40,7 +40,7 @@ export function fontServiceUrl(
 }
 
 /** Full face names preserve non-binary weights without changing the Office run schema. */
-export function installLensFont({ font, bytes }: FontFile): string {
+export function installFontLabFont({ font, bytes }: FontFile): string {
   if (!['ttf', 'otf'].includes(font.format))
     throw new Error('This font can be downloaded, but adding it requires a TTF or OTF file.')
   const buffer = new Uint8Array(bytes).buffer
@@ -61,7 +61,7 @@ export function installLensFont({ font, bytes }: FontFile): string {
   }
   if (createHash('sha256').update(bytes).digest('hex') !== font.sha256)
     throw new Error('Font checksum mismatch.')
-  const dir = lensFontDir()
+  const dir = fontLabDir()
   mkdirSync(dir, { recursive: true })
   const dest = join(dir, `${family}.${font.format}`)
   if (
@@ -83,7 +83,7 @@ export function installLensFont({ font, bytes }: FontFile): string {
 }
 
 export function registerFontPicker(afterFontsChanged: (family: string) => void): void {
-  setLensFontDir(lensFontDir())
+  setFontLabDir(fontLabDir())
   const sessions = new Map<number, ReturnType<typeof createPickerSession>>()
   const watched = new Set<number>()
   function getSession(sender: WebContents) {
@@ -92,7 +92,7 @@ export function registerFontPicker(afterFontsChanged: (family: string) => void):
       session = createPickerSession(
         {
           baseUrl: fontServiceUrl(),
-          apiKey: process.env.GENOFFICE_FONT_SERVICE_API_KEY,
+          apiKey: process.env.GENOFFICE_FONT_LAB_API_KEY,
         },
         (progress) => {
           if (!sender.isDestroyed()) sender.send('slides:font-picker-progress', progress)
@@ -132,7 +132,7 @@ export function registerFontPicker(afterFontsChanged: (family: string) => void):
           case 'font':
             return { ok: true, value: await session.font(request.fontId) }
           case 'install': {
-            const family = installLensFont(await session.font(request.fontId))
+            const family = installFontLabFont(await session.font(request.fontId))
             afterFontsChanged(family)
             return { ok: true, value: family }
           }
@@ -156,7 +156,7 @@ export function registerFontPicker(afterFontsChanged: (family: string) => void):
           ok: false,
           error:
             message === 'fetch failed'
-              ? 'Cannot reach the font service. Start Lens or check GENOFFICE_FONT_SERVICE_URL.'
+              ? 'Cannot reach the font service. Start Font Lab or check GENOFFICE_FONT_LAB_URL.'
               : message,
         }
       }

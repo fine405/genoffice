@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import JSZip from 'jszip'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl, screenshotPath } from './helpers'
+import type { FontDetails, ScanResult, CropBox } from '../packages/font-picker/src/types'
 import type { SlidesApi } from '../apps/slides/src/shared/ipc'
 
 async function fixture(image: Buffer) {
@@ -43,7 +44,7 @@ async function fixture(image: Buffer) {
 
 async function openPicker(page: Page) {
   await page.locator('.rb-font-name button').click()
-  await page.getByRole('button', { name: 'Find font from image…', exact: true }).click()
+  await page.getByRole('button', { name: 'Find font from image（Preview）…', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
 }
 async function scan(page: Page, duringDownload?: () => Promise<void>) {
@@ -93,15 +94,30 @@ test('font picker imports document regions, installs actual fonts, applies, undo
       return
     }
     if (route === '/api/v1/scans') {
-      scans.push(JSON.parse(body.toString()))
+      const request = JSON.parse(body.toString()) as { crop_box?: CropBox }
+      scans.push(request)
       res.end(
         JSON.stringify({
+          image_id: 'image-1',
+          preview_url: '/api/v1/images/image-1/file',
+          input_image: { width: 1024, height: 1024 },
+          expires_at: 9999999999,
+          scan_id: `scan-${scans.length}`,
+          crop_box: request.crop_box ?? null,
+          detected_words: 2,
+          ocr_engine: 'paddleocr',
+          ocr_ms: 1,
+          elapsed_ms: 2,
+          model_version: 'fixture',
+          debug_images: [],
           regions: [
             {
               id: 'r1',
               number: 1,
               text: 'Rubik headline',
-              box: { left: 0, top: 0, width: 1024, height: 1024 },
+              status: 'ready',
+              words: [],
+              box: request.crop_box ?? { left: 0, top: 0, width: 1024, height: 1024 },
               font_matches: [
                 {
                   family_id: 'carlito',
@@ -110,16 +126,17 @@ test('font picker imports document regions, installs actual fonts, applies, undo
                   fonts: [
                     {
                       font_id: 'carlito-regular',
-                      full_name: 'Lens Test Regular',
+                      full_name: 'Font Lab Test Regular',
                       weight: 400,
                       style: 'normal',
+                      file_url: '/api/v1/fonts/carlito-regular/file',
                     },
                   ],
                 },
               ],
             },
           ],
-        }),
+        } satisfies ScanResult),
       )
       return
     }
@@ -129,14 +146,20 @@ test('font picker imports document regions, installs actual fonts, applies, undo
           font_id: 'carlito-regular',
           family_id: 'carlito',
           family: 'Carlito',
-          full_name: 'Lens Test Regular',
+          full_name: 'Font Lab Test Regular',
           style: 'normal',
           weight: 400,
           format: 'ttf',
           size_bytes: bytes.length,
           sha256: createHash('sha256').update(bytes).digest('hex'),
           source_url: 'https://example.test/carlito.ttf',
-        }),
+          file_url: '/api/v1/fonts/carlito-regular/file',
+          license_status: 'unknown',
+          media_type: 'font/ttf',
+          internal_family: 'Carlito GO',
+          postscript_name: 'CarlitoGO-Regular',
+          embedding_flags: 0,
+        } satisfies FontDetails),
       )
       return
     }
@@ -160,8 +183,8 @@ test('font picker imports document regions, installs actual fonts, applies, undo
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const address = server.address() as { port: number }
-  const previousUrl = process.env.GENOFFICE_FONT_SERVICE_URL
-  process.env.GENOFFICE_FONT_SERVICE_URL = `http://127.0.0.1:${address.port}/api/v1`
+  const previousUrl = process.env.GENOFFICE_FONT_LAB_URL
+  process.env.GENOFFICE_FONT_LAB_URL = `http://127.0.0.1:${address.port}/api/v1`
   let launched = await launchShell({
     onboardingSeen: true,
     videoDir: 'slides-font-picker',
@@ -182,6 +205,12 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     await page.mouse.down()
     await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 8 })
     await page.mouse.up()
+    const selection = page.locator('.ReactCrop__crop-selection')
+    const selectedBefore = (await selection.boundingBox())!
+    await selection.press('ArrowRight')
+    expect((await selection.boundingBox())!.x).toBeGreaterThan(selectedBefore.x)
+    await selection.press('ArrowLeft')
+    await expect(selection.locator('.font-selection-frame')).toHaveCSS('border-top-width', '1px')
     await scan(page, async () => {
       const percent = Math.floor((Math.floor(bytes.length / 4) / bytes.length) * 100)
       await expect(page.getByRole('status')).toContainText(`Downloading font… ${percent}%`)
@@ -217,19 +246,48 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     expect(await readFile(downloadPath)).toEqual(bytes)
     await page.getByRole('button', { name: 'Add to GenOffice', exact: true }).click()
     await expect(page.getByRole('status')).toHaveText('Font added to GenOffice.')
+    const regionOverlay = page.locator('.font-picker-region')
+    await regionOverlay.hover()
+    await expect(regionOverlay).toHaveCSS('border-top-width', '0px')
+    await expect(regionOverlay.locator('.font-selection-frame')).toHaveCSS(
+      'border-top-width',
+      '1px',
+    )
     await page.screenshot({ path: screenshotPath('font-picker-light') })
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
     await page.screenshot({ path: screenshotPath('font-picker-dark') })
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'))
+    await page.getByRole('button', { name: 'Add region', exact: true }).click()
+    const reference = (await page.locator('.font-picker-image').boundingBox())!
+    await page.mouse.move(reference.x + reference.width * 0.1, reference.y + reference.height * 0.1)
+    await page.mouse.down()
+    await page.mouse.move(
+      reference.x + reference.width * 0.4,
+      reference.y + reference.height * 0.4,
+      { steps: 5 },
+    )
+    await page.mouse.up()
+    await scan(page)
+    await expect(page.locator('.font-picker-region')).toHaveCount(2)
+    await page.getByRole('button', { name: 'Adjust region', exact: true }).click()
+    const corner = page.getByRole('button', { name: 'Resize bottom-right corner', exact: true })
+    const beforeResize = (await selection.boundingBox())!
+    await corner.press('ArrowRight')
+    expect((await selection.boundingBox())!.width).toBeGreaterThan(beforeResize.width)
+    await scan(page)
+    await expect(page.locator('.font-picker-region')).toHaveCount(2)
+    await expect(page.locator('.font-picker-region-row > span')).toHaveText(['01', '02'])
     await page.getByRole('button', { name: 'Close', exact: true }).click()
     await page.locator('.rb-font-name button').click()
     await expect(
       page
-        .getByRole('group', { name: 'Custom fonts', exact: true })
-        .getByRole('button', { name: 'Lens Test Regular', exact: true }),
+        .getByRole('group', { name: 'Custom fonts（Preview）', exact: true })
+        .getByRole('button', { name: 'Font Lab Test Regular', exact: true }),
     ).toBeVisible()
     await expect(
-      page.locator('.rb-font-menu').getByRole('button', { name: 'Lens Test Regular', exact: true }),
+      page
+        .locator('.rb-font-menu')
+        .getByRole('button', { name: 'Font Lab Test Regular', exact: true }),
     ).toHaveCount(1)
     await page.locator('.rb-font-name button').click()
     const stage = (await page.locator('.stage-rel').boundingBox())!
@@ -237,7 +295,7 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     const scale = stage.width / 1280
     // The image context menu starts with the original picture and no text target.
     await page.mouse.click(stage.x + 350 * scale, stage.y + 350 * scale, { button: 'right' })
-    await page.getByText('Identify image font…', { exact: true }).click()
+    await page.getByText('Identify image font（Preview）…', { exact: true }).click()
     await expect(page.locator('.font-picker-image > img')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add and apply', exact: true })).toHaveCount(0)
     await page.keyboard.press('Escape')
@@ -274,10 +332,10 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(editor).toHaveCount(0)
     const partial = await savedXml(page, path)
-    expect(partial).toMatch(/typeface="Lens Test Regular"[^]*?<a:t>Rubik<\/a:t>/)
+    expect(partial).toMatch(/typeface="Font Lab Test Regular"[^]*?<a:t>Rubik<\/a:t>/)
     expect(partial).toContain('typeface="Rubik"')
     await page.keyboard.press('Meta+z')
-    await expect.poll(() => savedXml(page, path)).not.toContain('typeface="Lens Test Regular"')
+    await expect.poll(() => savedXml(page, path)).not.toContain('typeface="Font Lab Test Regular"')
     await page.mouse.click(stage.x + 130 * scale, stage.y + 130 * scale)
     await page.screenshot({ path: screenshotPath('font-picker-target') })
     await openPicker(page)
@@ -289,13 +347,13 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     await scan(page)
     await page.getByRole('button', { name: 'Add and apply', exact: true }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect(page.locator('.rb-font-input')).toHaveValue('Lens Test Regular')
+    await expect(page.locator('.rb-font-input')).toHaveValue('Font Lab Test Regular')
     // Save then undo and redo through the real editor, verifying OOXML, not just preview CSS.
-    expect(await savedXml(page, path)).toContain('typeface="Lens Test Regular"')
+    expect(await savedXml(page, path)).toContain('typeface="Font Lab Test Regular"')
     await page.keyboard.press('Meta+z')
-    expect(await savedXml(page, path)).not.toContain('typeface="Lens Test Regular"')
+    expect(await savedXml(page, path)).not.toContain('typeface="Font Lab Test Regular"')
     await page.keyboard.press('Meta+Shift+z')
-    expect(await savedXml(page, path)).toContain('typeface="Lens Test Regular"')
+    expect(await savedXml(page, path)).toContain('typeface="Font Lab Test Regular"')
     const userDataDir = launched.userDataDir
     await launched.app.evaluate(
       ({ dialog }, source) => {
@@ -325,11 +383,13 @@ test('font picker imports document regions, installs actual fonts, applies, undo
       return { catalog: await api.fontCatalog(), faces: await api.privateFontFaces() }
     })
     expect(
-      available.catalog.some((f) => f.family === 'Lens Test Regular' && f.installed && f.custom),
+      available.catalog.some(
+        (f) => f.family === 'Font Lab Test Regular' && f.installed && f.custom,
+      ),
     ).toBe(true)
-    expect(available.faces.some((f) => f.family === 'Lens Test Regular')).toBe(true)
+    expect(available.faces.some((f) => f.family === 'Font Lab Test Regular')).toBe(true)
     await page.locator('.rb-font-name button').click()
-    const customFonts = page.getByRole('group', { name: 'Custom fonts', exact: true })
+    const customFonts = page.getByRole('group', { name: 'Custom fonts（Preview）', exact: true })
     const arial = (await page
       .locator('.rb-font-menu')
       .getByRole('button', { name: 'Arial', exact: true })
@@ -341,7 +401,7 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     expect(times.y).toBeGreaterThanOrEqual(arial.y + arial.height)
     expect(times.x).toBe(arial.x)
     await expect(
-      customFonts.getByRole('button', { name: 'Lens Test Regular', exact: true }),
+      customFonts.getByRole('button', { name: 'Font Lab Test Regular', exact: true }),
     ).toBeVisible()
     await expect(customFonts.getByRole('button', { name: 'Carlito GO', exact: true })).toBeVisible()
     await expect(
@@ -350,14 +410,69 @@ test('font picker imports document regions, installs actual fonts, applies, undo
     await expect(
       page
         .getByRole('group', { name: 'Downloadable fonts', exact: true })
-        .getByRole('button', { name: /Carlito|Lens Test Regular/ }),
+        .getByRole('button', { name: /Carlito|Font Lab Test Regular/ }),
     ).toHaveCount(0)
     await page.screenshot({ path: screenshotPath('font-picker-custom-fonts') })
   } finally {
     releaseFontDownload?.()
     await closeAndSaveVideo(launched, 'slides-font-picker-final')
     server.close()
-    if (previousUrl === undefined) delete process.env.GENOFFICE_FONT_SERVICE_URL
-    else process.env.GENOFFICE_FONT_SERVICE_URL = previousUrl
+    if (previousUrl === undefined) delete process.env.GENOFFICE_FONT_LAB_URL
+    else process.env.GENOFFICE_FONT_LAB_URL = previousUrl
+  }
+})
+
+test('Font Lab live recognition, preview and document font application', async () => {
+  test.skip(
+    process.env.FONT_LAB_LIVE !== '1',
+    'Requires the local Font Lab service and recognition model',
+  )
+  test.setTimeout(180_000)
+  const image = Buffer.from(
+    await (await fetch('http://127.0.0.1:8100/api/v1/examples/editorial/image')).arrayBuffer(),
+  )
+  const { path } = await fixture(image)
+  const launched = await launchShell({
+    onboardingSeen: true,
+    lang: 'zh',
+    openFile: path,
+    videoDir: 'font-lab-live',
+  })
+  try {
+    const page = await waitForPageWithUrl(launched.app, 'slides/out')
+    await page.waitForSelector('.stage-wrap canvas')
+    const stage = (await page.locator('.stage-rel').boundingBox())!
+    const scale = stage.width / 1280
+    await page.mouse.click(stage.x + 130 * scale, stage.y + 130 * scale)
+    await page.locator('.rb-font-name button').click()
+    await page.getByRole('button', { name: '从图片找字体（Preview）…', exact: true }).click()
+    await page.getByRole('button', { name: '从文档选取图片', exact: true }).click()
+    await page.locator('.font-picker-gallery button').click()
+    await page.getByRole('button', { name: '识别字体', exact: true }).click()
+    const region = page.locator('.font-picker-region-row').filter({ hasText: 'FORM' })
+    await expect(region).toBeVisible({ timeout: 120_000 })
+    await region.click()
+    const match = page.locator('.font-picker-match').filter({ hasText: 'Archivo Black' })
+    await expect(match).toBeVisible()
+    await match.click()
+    await expect(page.getByRole('button', { name: '添加并应用', exact: true })).toBeEnabled({
+      timeout: 60_000,
+    })
+    await page.screenshot({ path: screenshotPath('font-lab-live-light') })
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
+    await page.screenshot({ path: screenshotPath('font-lab-live-dark') })
+    await page.getByRole('button', { name: '添加并应用', exact: true }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    expect(await savedXml(page, path)).toContain('typeface="Archivo Black Regular"')
+    const catalog = await page.evaluate(() =>
+      (window as unknown as { slidesApi: SlidesApi }).slidesApi.fontCatalog(),
+    )
+    expect(
+      catalog.some(
+        (font) => font.family === 'Archivo Black Regular' && font.custom && font.installed,
+      ),
+    ).toBe(true)
+  } finally {
+    await closeAndSaveVideo(launched, 'font-lab-live')
   }
 })

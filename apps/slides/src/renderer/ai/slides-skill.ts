@@ -316,9 +316,22 @@ const TOOLS: AgentToolDef[] = [
     },
   },
   {
+    name: 'remove_image_background',
+    description:
+      'Remove background（Preview）: use the local Image Lab engine to remove the background of an existing top-level picture. Preserves frame, crop, rotation, border and effects. Applies the transparent PNG in place with undo. Always use this tool for background removal; do not use generate_image or a cloud model. On failure report it without falling back to another service.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        slideIndex: { type: 'integer', description: 'Zero-based slide index' },
+        sourceId: { type: 'string', description: 'Picture element ID' },
+      },
+      required: ['slideIndex', 'sourceId'],
+    },
+  },
+  {
     name: 'generate_image',
     description:
-      'AI image generation/editing. Text-to-image, or pass referenceImageUrls for image editing; returns an image URL. NEW imagery: insert with insert_web_image. Editing an EXISTING slide picture (background removal/upscaling/etc.): swap it in place with replace_image — do not insert a duplicate. Use for custom illustrations/icons/backgrounds, style-consistent imagery; for real photos/screenshots still use image_search.',
+      'AI image generation/editing. Text-to-image, or pass referenceImageUrls for image editing; returns an image URL. NEW imagery: insert with insert_web_image. Editing an EXISTING slide picture (upscaling/etc.): swap it in place with replace_image — do not insert a duplicate. Use for custom illustrations/icons/backgrounds, style-consistent imagery; for real photos/screenshots still use image_search.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -330,7 +343,7 @@ const TOOLS: AgentToolDef[] = [
         model: {
           type: 'string',
           description:
-            'Optional, defaults to the configured model. Genspark only — specify for special purposes: fal-bria-rmbg=background removal, fal-ai/recraft-clarity-upscale=upscale, flux-pro/outpaint=outpaint, fal-ai/image-editing/text-removal=remove text watermark',
+            'Optional, defaults to the configured model. Genspark only — specify for special purposes: fal-ai/recraft-clarity-upscale=upscale, flux-pro/outpaint=outpaint, fal-ai/image-editing/text-removal=remove text watermark',
         },
         referenceImageUrls: {
           type: 'array',
@@ -386,7 +399,7 @@ const TOOLS: AgentToolDef[] = [
   {
     name: 'replace_image',
     description:
-      'Swap a picture\'s source image for a URL (from image_search or generate_image) in place — position, size, z-order, border and effects all survive. This is the tool for "change/AI-edit this image" flows: e.g. run generate_image with referenceImageUrls for background removal/upscaling/editing, then replace_image with the returned URL. A new image with a different aspect ratio is never stretched: it fills the frame and is center-cropped (object-fit: cover). keepCrop keeps the existing crop window and is only correct when the new image has the same pixel geometry as the old one (e.g. background removal output).',
+      'Swap a picture\'s source image for a URL (from image_search or generate_image) in place — position, size, z-order, border and effects all survive. This is the tool for "change/AI-edit this image" flows: e.g. run generate_image with referenceImageUrls for upscaling/editing, then replace_image with the returned URL. A new image with a different aspect ratio is never stretched: it fills the frame and is center-cropped (object-fit: cover). keepCrop keeps the existing crop window and is only correct when the new image has the same pixel geometry as the old one (e.g. background removal output).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1476,7 +1489,7 @@ async function executeTool(
       return {
         output:
           `Image generated, URL: ${r.url}\n` +
-          'New imagery: insert it with insert_web_image. If this edits an existing slide picture (e.g. background removal), swap it in place with replace_image instead.',
+          'New imagery: insert it with insert_web_image. If this edits an existing slide picture (e.g. recoloring), swap it in place with replace_image instead.',
         mutated: false,
         summary: t('aiSumGenImage', {
           prompt: `${prompt.slice(0, 20)}${prompt.length > 20 ? '…' : ''}`,
@@ -1530,6 +1543,39 @@ async function executeTool(
         output: `Inserted the image on page ${idx + 1}, element id=${r.sourceId}.`,
         mutated: true,
         summary: t('aiSumInsertImage', { n: idx + 1 }),
+      }
+    }
+
+    case 'remove_image_background': {
+      const idx = Number(call.input.slideIndex)
+      const sourceId = String(call.input.sourceId ?? '')
+      const requestId = crypto.randomUUID()
+      const cancel = () => {
+        void window.slidesApi.imageLab({ action: 'cancel', requestId })
+      }
+      signal?.throwIfAborted()
+      signal?.addEventListener('abort', cancel, { once: true })
+      try {
+        const prepared = await window.slidesApi.imageLab({
+          action: 'prepare',
+          requestId,
+          slideIndex: idx,
+          sourceId,
+        })
+        signal?.throwIfAborted()
+        if (!prepared.ok) return fail(t('aiFailReplaceImage'), prepared.error)
+        const applied = await window.slidesApi.imageLab({ action: 'apply', requestId })
+        if (!applied.ok) return fail(t('aiFailReplaceImage'), applied.error)
+        if (!applied.slide) return fail(t('aiFailReplaceImage'), 'No updated slide returned.')
+        access.applySlide(idx, applied.slide)
+        return {
+          output: `Removed background of picture ${sourceId} on page ${idx + 1}. The transparent image was applied in place; undo is available.`,
+          mutated: true,
+          summary: t('aiChipRemoveBg') + '（Preview）',
+        }
+      } finally {
+        signal?.removeEventListener('abort', cancel)
+        cancel()
       }
     }
 

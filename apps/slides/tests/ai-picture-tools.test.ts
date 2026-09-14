@@ -97,3 +97,54 @@ describe('replace_image', () => {
     )
   })
 })
+
+describe('remove_image_background', () => {
+  it('applies only after processing succeeds and uses the same request for cleanup', async () => {
+    api().imageLab = vi.fn(async (request) =>
+      request.action === 'apply' ? { ok: true, slide: deck, slideIndex: 0 } : { ok: true },
+    )
+    const access = mkAccess()
+    access.applySlide = vi.fn()
+    const result = await createSlidesSkill(access).executeTool!(call('remove_image_background', {}))
+    expect(result.mutated).toBe(true)
+    expect(access.applySlide).toHaveBeenCalledWith(0, deck)
+    const requests = api().imageLab!.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.action)).toEqual(['prepare', 'apply', 'cancel'])
+    expect(new Set(requests.map((request) => request.requestId)).size).toBe(1)
+    expect(api().replacePictureUrl).not.toHaveBeenCalled()
+  })
+
+  it('reports service failure without applying or falling back to cloud', async () => {
+    api().imageLab = vi.fn(async () => ({ ok: false, error: 'Service offline' }))
+    const result = await createSlidesSkill(mkAccess()).executeTool!(
+      call('remove_image_background', {}),
+    )
+    expect(result.isError).toBe(true)
+    expect(result.mutated).not.toBe(true)
+    expect(api().imageLab!.mock.calls.map(([request]) => request.action)).toEqual([
+      'prepare',
+      'cancel',
+    ])
+    expect(api().replacePictureUrl).not.toHaveBeenCalled()
+  })
+
+  it('cancels a pending AI job without applying its late result', async () => {
+    const controller = new AbortController()
+    let finish!: (value: { ok: true }) => void
+    api().imageLab = vi.fn((request) =>
+      request.action === 'prepare'
+        ? new Promise((resolve) => {
+            finish = resolve
+          })
+        : Promise.resolve({ ok: true }),
+    )
+    const pending = createSlidesSkill(mkAccess()).executeTool!(
+      call('remove_image_background', {}),
+      controller.signal,
+    )
+    controller.abort()
+    finish({ ok: true })
+    await expect(pending).rejects.toThrow()
+    expect(api().imageLab!.mock.calls.some(([request]) => request.action === 'apply')).toBe(false)
+  })
+})

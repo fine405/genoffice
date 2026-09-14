@@ -356,7 +356,7 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
                   onClick: () => ctx.openFontPicker(ctxMenu.targetId),
                 } as CtxItem,
                 {
-                  label: t('appCtxRemoveBackground'),
+                  label: t('appCtxRemoveBackground') + '（Preview）',
                   onClick: () => pictureEditActions.startCutout(ctx),
                 } as CtxItem,
               ]

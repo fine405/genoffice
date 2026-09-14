@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { createFontClient, type ClientOptions, type CropBox } from '@lens/sdk'
+import { createFontClient, type ClientOptions, type CropBox } from '@font-lab/sdk'
 import type { FontFile, FontProgress, PickerImage } from './types'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -93,9 +93,7 @@ export function createPickerSession(
         await (await client.imageFile(image.image_id, opts)).arrayBuffer(),
       )
       return {
-        id: image.image_id,
-        width: image.input_image.width,
-        height: image.input_image.height,
+        ...image,
         dataUrl: `data:image/png;base64,${normalized.toString('base64')}`,
       }
     },

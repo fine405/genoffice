@@ -300,6 +300,7 @@ export function AiAskPopover({
             }}
           >
             {t(key)}
+            {key === 'aiChipRemoveBg' ? '（Preview）' : ''}
           </button>
         ))}
       </div>

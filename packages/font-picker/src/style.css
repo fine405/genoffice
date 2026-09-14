@@ -128,7 +128,7 @@
 }
 .font-picker-image-scroll,
 .font-picker-gallery {
-  height: 320px;
+  height: 380px;
   overflow: auto;
   background: var(--bg-content);
   border: 1px solid var(--border);
@@ -138,27 +138,12 @@
 .font-picker-image {
   position: relative;
   touch-action: none;
-  cursor: crosshair;
   user-select: none;
 }
 .font-picker-image > img {
   width: 100%;
   height: auto;
   display: block;
-}
-.font-picker-crop {
-  position: absolute;
-  border: 2px solid var(--accent);
-  pointer-events: none;
-}
-.font-picker-crop > span {
-  position: absolute;
-  top: -24px;
-  left: -2px;
-  background: var(--accent);
-  color: var(--color-btn-primary-text);
-  padding: 0 6px;
-  border-radius: 4px;
 }
 .font-picker-hint {
   font-size: 12px;
@@ -185,12 +170,15 @@
 }
 .font-picker-matches {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 8px;
-  max-height: 250px;
+  max-height: 290px;
   overflow: auto;
 }
 .font-picker .font-picker-match {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   text-align: left;
   padding: 10px 12px;
@@ -211,6 +199,7 @@
   font-size: 11px;
 }
 .font-picker-sample {
+  width: 100%;
   font-size: 23px;
   line-height: 1.3;
   white-space: nowrap;
@@ -295,24 +284,266 @@
   }
 }
 
+/* Font Lab selection geometry; colors adapt to GenOffice's theme. */
+.font-picker {
+  --font-region-1: #7550b6;
+  --font-region-2: #237c68;
+  --font-region-3: #bb671c;
+  --font-region-4: #3469b0;
+  --font-region-5: #b74d72;
+  --font-region-6: #77741a;
+  --font-region-7: #258091;
+  --font-region-8: #93583c;
+  --selection-stroke: var(--accent);
+}
+[data-theme='dark'] .font-picker {
+  --font-region-1: #b797e4;
+  --font-region-2: #74c7af;
+  --font-region-3: #e6a466;
+  --font-region-4: #84b0e9;
+  --font-region-5: #e195b0;
+  --font-region-6: #c2bf69;
+  --font-region-7: #75c2d2;
+  --font-region-8: #cf9b81;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .font-picker {
+    --font-region-1: #b797e4;
+    --font-region-2: #74c7af;
+    --font-region-3: #e6a466;
+    --font-region-4: #84b0e9;
+    --font-region-5: #e195b0;
+    --font-region-6: #c2bf69;
+    --font-region-7: #75c2d2;
+    --font-region-8: #cf9b81;
+  }
+}
+.font-picker-image-scroll {
+  padding: 10px;
+}
+.font-picker-image-size {
+  margin-inline: auto;
+}
+.font-picker-image-tools {
+  margin-bottom: 10px;
+}
+.font-picker-scan {
+  width: 100%;
+  margin-top: 8px;
+}
+.font-reference-crop {
+  width: 100%;
+  line-height: 0;
+  --rc-drag-bar-size: 16px;
+}
+.font-reference-crop.ReactCrop .ReactCrop__crop-selection {
+  background: none;
+  animation: none;
+  outline: none;
+  transition: none;
+}
+.font-reference-crop .ReactCrop__selection-addon {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.font-reference-crop .ReactCrop__crop-mask > rect {
+  fill: var(--text);
+  fill-opacity: 0.12;
+}
+.font-reference-crop.ReactCrop .ReactCrop__drag-handle {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  z-index: 2;
+  outline: none;
+}
+.font-reference-crop .ReactCrop__drag-handle:is(.ord-n, .ord-e, .ord-s, .ord-w)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--selection-stroke);
+  box-shadow: 0 0 0 1px var(--surface);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 140ms ease;
+  pointer-events: none;
+}
+.font-reference-crop .ReactCrop__drag-handle:is(.ord-e, .ord-w)::after {
+  width: 2px;
+  height: 10px;
+}
+.font-reference-crop.ReactCrop
+  :is(.ReactCrop__crop-selection, .ReactCrop__drag-handle):focus-visible {
+  outline: 2px solid var(--selection-stroke);
+  outline-offset: 4px;
+}
+.font-reference-crop .ReactCrop__drag-handle:focus-visible::after {
+  opacity: 1;
+}
+.font-reference-crop.ReactCrop--active .font-selection-frame {
+  border-color: var(--selection-stroke);
+}
+.font-selection-frame {
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--selection-stroke) 35%, transparent);
+  pointer-events: none;
+  transition:
+    border-color 140ms ease,
+    opacity 140ms ease;
+}
+.font-selection-frame > i {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  max-width: 50%;
+  max-height: 50%;
+  border: 0 solid var(--selection-stroke);
+  filter: drop-shadow(0 0 1px var(--surface));
+}
+.font-selection-frame > i:nth-child(1) {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+.font-selection-frame > i:nth-child(2) {
+  top: -1px;
+  right: -1px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+.font-selection-frame > i:nth-child(3) {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+.font-selection-frame > i:nth-child(4) {
+  bottom: -1px;
+  left: -1px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
 .font-picker .font-picker-region {
   position: absolute;
-  border: 1px solid var(--accent);
+  border: 0;
   background: transparent;
   padding: 0;
   border-radius: 0;
+  color: var(--selection-stroke);
 }
-.font-picker .font-picker-region.selected {
-  border-width: 3px;
+.font-picker-region .font-selection-frame {
+  opacity: 0.56;
 }
-.font-picker .font-picker-region:is(:hover, :focus-visible) {
-  box-shadow: inset 0 0 0 1px var(--accent);
+.font-picker .font-picker-region:is(.selected, :focus-visible) {
+  background: color-mix(in srgb, var(--selection-stroke) 4%, transparent);
+  z-index: 1;
 }
-.font-picker-region span {
+.font-picker-region:is(.selected, :focus-visible) .font-selection-frame {
+  opacity: 1;
+}
+.font-picker-region:focus-visible {
+  outline-color: var(--selection-stroke);
+  outline-offset: 4px;
+}
+.font-region-number {
   position: absolute;
-  top: 0;
-  left: 0;
-  background: var(--accent);
-  color: var(--color-btn-primary-text);
-  padding: 0 5px;
+  bottom: calc(100% + 5px);
+  left: -1px;
+  padding: 3px 5px;
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--selection-stroke);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--selection-stroke) 25%, transparent);
+  border-radius: 4px;
+}
+.font-region-number.inside {
+  top: 3px;
+  bottom: auto;
+  left: 3px;
+}
+.font-picker-region-list {
+  display: grid;
+  gap: 6px;
+  max-height: 160px;
+  overflow: auto;
+}
+.font-picker .font-picker-region-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  border-left: 3px solid var(--selection-stroke);
+}
+.font-picker-region-row > span {
+  color: var(--selection-stroke);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.font-picker-region-row > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.font-picker-region-row > small {
+  color: var(--text-muted);
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.font-picker .font-picker-region-row.selected {
+  border-color: var(--selection-stroke);
+  background: color-mix(in srgb, var(--selection-stroke) 4%, var(--surface));
+}
+.font-picker-match-heading {
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.font-picker-score {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.font-picker-rank {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+@media (hover: hover) and (pointer: fine) {
+  .font-picker .font-picker-region:hover {
+    background: color-mix(in srgb, var(--selection-stroke) 4%, transparent);
+    z-index: 1;
+  }
+  .font-picker-region:hover .font-selection-frame {
+    opacity: 1;
+  }
+  .font-reference-crop .ReactCrop__crop-selection:hover .ReactCrop__drag-handle::after {
+    opacity: 0.8;
+  }
+}
+@media (pointer: coarse) {
+  .font-reference-crop.ReactCrop .ReactCrop__drag-handle {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .font-selection-frame,
+  .font-reference-crop .ReactCrop__drag-handle::after {
+    transition: none;
+  }
 }

@@ -9,9 +9,9 @@ import type {
   PickerImage,
   Region,
 } from './types'
-import { cropFromPoints, imagePoint, type Point } from './crop'
+import { ImageStage, regionStyle } from './ImageStage'
 import { fontPickerStrings } from './strings'
-import { cssFontStyle } from './font-style'
+import { loadFontPreview } from '@font-lab/sdk/browser'
 
 interface Props {
   api: FontPickerApi
@@ -46,16 +46,13 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
   const [notice, setNotice] = useState('')
   const [scanned, setScanned] = useState(false)
   const [gallery, setGallery] = useState(false)
-  const [zoom, setZoom] = useState(100)
-  const drag = useRef<Point | null>(null)
+  const [editing, setEditing] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const region = regions.find((r) => r.id === regionId)
   const matches = region?.font_matches ?? []
   const match = matches.find((m) => m.fonts.some((f) => f.font_id === fontId))
   const variant = match?.fonts.find((f) => f.font_id === fontId)
-  const canInstall =
-    fontFile &&
-    ['ttf', 'otf'].includes(fontFile.font.format) &&
-    !/variable/i.test(fontFile.font.style)
+  const canInstall = fontFile && ['ttf', 'otf'].includes(fontFile.font.format)
 
   useEffect(() => {
     active.current = true
@@ -101,7 +98,8 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
       const next = await api.upload(new Uint8Array(await blob.arrayBuffer()))
       if (!active.current) return
       setImage(next)
-      setZoom(100)
+      setEditing(true)
+      setEditingId(null)
       setGallery(false)
     })
   }
@@ -129,7 +127,8 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
 
   useEffect(() => {
     const ticket = ++generation.current
-    let face: FontFace | undefined
+    const abort = new AbortController()
+    let preview: Awaited<ReturnType<typeof loadFontPreview>> | undefined
     let receivingFont = true
     const unsubscribe = api.onFontProgress?.((progress) => {
       if (
@@ -153,16 +152,15 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
         if (!active.current || generation.current !== ticket) return
         setFontProgress(null)
         setFontLoading(true)
-        const family = `font-picker-${crypto.randomUUID()}`
-        face = new FontFace(family, new Uint8Array(file.bytes).buffer, {
-          weight: String(file.font.weight),
-          style: cssFontStyle(file.font.style),
+        preview = await loadFontPreview(new Response(new Uint8Array(file.bytes)), file.font, {
+          signal: abort.signal,
         })
-        await face.load()
-        if (!active.current || generation.current !== ticket) return
-        document.fonts.add(face)
+        if (!active.current || generation.current !== ticket) {
+          preview.dispose()
+          return
+        }
         setFontFile(file)
-        setPreviewFamily(family)
+        setPreviewFamily(preview.family)
         setFontLoading(false)
       })
       .catch((e) => {
@@ -178,7 +176,8 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
       // eslint-disable-next-line react-hooks/exhaustive-deps
       generation.current++
       unsubscribe?.()
-      if (face) document.fonts.delete(face)
+      abort.abort()
+      preview?.dispose()
     }
     // Locale changes must not restart a font download.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,16 +190,43 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
   }
   async function scan() {
     if (!image) return
+    if (editing && crop && (crop.width < 8 || crop.height < 8)) {
+      setError(t.smallCrop)
+      return
+    }
     await run(t.scanning, async () => {
-      setFontId('')
-      setRegions([])
-      setScanned(false)
-      const result = await api.scan(image.id, crop)
+      const result = await api.scan(image.image_id, editing ? crop : null)
       if (!active.current) return
-      setRegions(result.regions)
+      const previous = regions.find((region) => region.id === editingId)
+      const nextNumber = Math.max(0, ...regions.map((region) => region.number)) + 1
+      const incoming =
+        editing && crop
+          ? result.regions.map((region, index) => ({
+              ...region,
+              id: index === 0 && previous ? previous.id : crypto.randomUUID(),
+              number:
+                index === 0 && previous ? previous.number : nextNumber + index - (previous ? 1 : 0),
+            }))
+          : result.regions
+      if (editing && crop && !incoming.length) {
+        setError(t.noResults)
+        return
+      }
+      setRegions(
+        editing && crop
+          ? [...regions.filter((region) => region.id !== editingId), ...incoming].sort(
+              (a, b) => a.number - b.number,
+            )
+          : incoming,
+      )
       setScanned(true)
+      setEditing(false)
+      setEditingId(null)
+      setCrop(null)
+      setFontId('')
       const first =
-        result.regions.find((r) => r.font_matches.some((m) => m.fonts.length)) ?? result.regions[0]
+        incoming.find((region) => region.font_matches.some((match) => match.fonts.length)) ??
+        incoming[0]
       if (first) chooseRegion(first)
     })
   }
@@ -226,7 +252,7 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
   const previewStyle: CSSProperties = {
     fontFamily: previewFamily ? `"${previewFamily}"` : undefined,
     fontWeight: variant?.weight,
-    fontStyle: cssFontStyle(variant?.style),
+    fontStyle: variant?.style,
   }
   const progressText = fontLoading
     ? t.loadingFont
@@ -304,153 +330,71 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
                 </button>
               ))}
             </div>
-          ) : (
-            <div className="font-picker-image-scroll">
-              {image ? (
-                <div
-                  className="font-picker-image"
-                  style={{
-                    width: `${zoom}%`,
-                    maxWidth: `${(((320 * image.width) / image.height) * zoom) / 100}px`,
-                    marginInline: 'auto',
-                  }}
-                  onPointerDown={(e) => {
-                    if (busy || e.button !== 0) return
-                    e.preventDefault()
-                    e.currentTarget.setPointerCapture(e.pointerId)
-                    drag.current = imagePoint(
-                      e.clientX,
-                      e.clientY,
-                      e.currentTarget.getBoundingClientRect(),
-                    )
-                    setCrop(null)
-                    setFontId('')
-                    setRegions([])
-                    setScanned(false)
-                    setError('')
-                  }}
-                  onPointerMove={(e) => {
-                    if (!drag.current) return
-                    setCrop(
-                      cropFromPoints(
-                        drag.current,
-                        imagePoint(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect()),
-                        image.width,
-                        image.height,
-                      ),
-                    )
-                  }}
-                  onPointerUp={(e) => {
-                    if (!drag.current) return
-                    const next = cropFromPoints(
-                      drag.current,
-                      imagePoint(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect()),
-                      image.width,
-                      image.height,
-                    )
-                    drag.current = null
-                    setCrop(next)
-                    if (!next) setError(t.smallCrop)
-                  }}
-                  onPointerCancel={() => {
-                    drag.current = null
-                    setCrop(null)
-                  }}
-                >
-                  <img src={image.dataUrl} alt={t.reference} draggable={false} />
-                  {!crop &&
-                    regions.map((r) => (
-                      <button
-                        key={r.id}
-                        className={`font-picker-region${regionId === r.id ? ' selected' : ''}`}
-                        aria-label={`${r.number}. ${r.text}`}
-                        title={r.text}
-                        style={{
-                          left: `${(r.box.left / image.width) * 100}%`,
-                          top: `${(r.box.top / image.height) * 100}%`,
-                          width: `${(r.box.width / image.width) * 100}%`,
-                          height: `${(r.box.height / image.height) * 100}%`,
-                        }}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() => chooseRegion(r)}
-                      >
-                        <span>{r.number}</span>
-                      </button>
-                    ))}
-                  {crop && (
-                    <div
-                      className="font-picker-crop"
-                      style={{
-                        left: `${(crop.left / image.width) * 100}%`,
-                        top: `${(crop.top / image.height) * 100}%`,
-                        width: `${(crop.width / image.width) * 100}%`,
-                        height: `${(crop.height / image.height) * 100}%`,
-                      }}
-                    >
-                      <span>1</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="font-picker-empty">{busy || t.empty}</p>
-              )}
-            </div>
-          )}
-          <p className="font-picker-hint">{t.crop}</p>
-          <div className="font-picker-tools">
-            <button
-              disabled={!image || !!busy}
-              onClick={() => {
-                setCrop(null)
-                setFontId('')
-                setRegions([])
-                setScanned(false)
+          ) : !image ? (
+            <p className="font-picker-empty">{t.empty}</p>
+          ) : null}
+          {image && !gallery && (
+            <ImageStage
+              key={image.image_id}
+              image={image}
+              regions={regions}
+              selectedId={regionId}
+              busy={!!busy}
+              crop={crop}
+              editing={editing}
+              lang={lang}
+              onCrop={setCrop}
+              onSelect={chooseRegion}
+              onEdit={(region) => {
+                setEditing(true)
+                setEditingId(region?.id ?? null)
+                setCrop(region?.box ?? null)
+                setError('')
               }}
-            >
-              {t.reset}
-            </button>
-            <label className="font-picker-zoom">
-              <input
-                type="range"
-                min="100"
-                max="250"
-                step="25"
-                value={zoom}
-                aria-label="Zoom"
-                onChange={(e) => setZoom(Number(e.target.value))}
-              />
-              {zoom}%
-            </label>
-            <button
-              className="font-picker-primary"
-              disabled={!image || !!busy}
-              onClick={() => void scan()}
-            >
-              {busy === t.scanning ? t.scanning : t.scan}
-            </button>
-          </div>
+              onCancel={() => {
+                setEditing(false)
+                setEditingId(null)
+                setCrop(null)
+              }}
+            />
+          )}
+          <button
+            className="font-picker-primary font-picker-scan"
+            disabled={
+              !image || !!busy || (editing && !!crop && (crop.width < 8 || crop.height < 8))
+            }
+            onClick={() => void scan()}
+          >
+            {busy === t.scanning ? t.scanning : t.scan}
+          </button>
         </section>
         <section className="font-picker-results">
           <h3>{t.candidates}</h3>
-          {regions.length > 1 && (
-            <label>
-              {t.regions}
-              <select
-                value={regionId}
-                disabled={!!busy}
-                onChange={(e) => {
-                  const next = regions.find((r) => r.id === e.target.value)
-                  if (next) chooseRegion(next)
-                }}
-              >
-                {regions.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.number}. {r.text.slice(0, 60)}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {regions.length > 0 && (
+            <div className="font-picker-region-list" role="group" aria-label={t.regions}>
+              {regions.map((item) => (
+                <button
+                  key={item.id}
+                  className={`font-picker-region-row${regionId === item.id ? ' selected' : ''}`}
+                  style={regionStyle(item.number)}
+                  disabled={!!busy}
+                  aria-pressed={regionId === item.id}
+                  onClick={() => chooseRegion(item)}
+                >
+                  <span>{String(item.number).padStart(2, '0')}</span>
+                  <strong>{item.text || t.manualRegion}</strong>
+                  <small>
+                    {item.status === 'review'
+                      ? t.reviewRegion
+                      : item.status === 'error'
+                        ? t.failedRegion
+                        : item.font_matches[0]?.name}
+                  </small>
+                </button>
+              ))}
+            </div>
           )}
+          {region?.error && <p className="font-picker-hint">{region.error}</p>}
           <div className="font-picker-matches">
             {!matches.length && (
               <p className="font-picker-empty">{busy || (scanned ? t.noResults : t.beforeScan)}</p>
@@ -466,7 +410,11 @@ export function FontPicker({ api, lang, images, initialImage, target, onApply, o
                   onClick={() => setFontId(candidate.fonts[0]!.font_id)}
                 >
                   <span className="font-picker-match-heading">
+                    <span className="font-picker-rank">{String(index + 1).padStart(2, '0')}</span>
                     <strong>{candidate.name}</strong>
+                    <span className="font-picker-score" title={t.scoreHint}>
+                      {candidate.score.toFixed(3)}
+                    </span>
                     {index === 0 && <small>{t.similar}</small>}
                   </span>
                   <FontSample
@@ -583,31 +531,32 @@ function FontSample({ api, fontId, text }: { api: FontPickerApi; fontId: string;
   const [style, setStyle] = useState<CSSProperties | null>(null)
   useEffect(() => {
     let canceled = false
-    let face: FontFace | undefined
+    const abort = new AbortController()
+    let preview: Awaited<ReturnType<typeof loadFontPreview>> | undefined
     setStyle(null)
     if (!fontId) return
     void api
       .font(fontId)
       .then(async ({ font, bytes }) => {
         if (canceled) return
-        const family = `font-sample-${crypto.randomUUID()}`
-        face = new FontFace(family, new Uint8Array(bytes).buffer, {
-          weight: String(font.weight),
-          style: cssFontStyle(font.style),
+        preview = await loadFontPreview(new Response(new Uint8Array(bytes)), font, {
+          signal: abort.signal,
         })
-        await face.load()
-        if (canceled) return
-        document.fonts.add(face)
+        if (canceled) {
+          preview.dispose()
+          return
+        }
         setStyle({
-          fontFamily: `"${family}"`,
+          fontFamily: `"${preview.family}"`,
           fontWeight: font.weight,
-          fontStyle: cssFontStyle(font.style),
+          fontStyle: font.style,
         })
       })
       .catch(() => {})
     return () => {
       canceled = true
-      if (face) document.fonts.delete(face)
+      abort.abort()
+      preview?.dispose()
     }
   }, [api, fontId])
   return (

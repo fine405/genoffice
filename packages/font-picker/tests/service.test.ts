@@ -41,7 +41,7 @@ describe('font picker service boundary', () => {
     const events: FontProgress[] = []
     const { session } = backend(false, (event) => events.push(event))
     const image = await session.upload(new Uint8Array([1]))
-    await session.scan(image.id, null)
+    await session.scan(image.image_id, null)
     await session.font('font-a')
     expect(events).toEqual([
       { fontId: 'font-a', phase: 'preparing', received: 0 },
@@ -64,7 +64,7 @@ describe('font picker service boundary', () => {
           })
         }),
     )
-    const pending = expect(session.scan(image.id, null)).rejects.toThrow()
+    const pending = expect(session.scan(image.image_id, null)).rejects.toThrow()
     await session.dispose()
     await pending
     expect(fetch.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(true)
@@ -79,10 +79,10 @@ describe('font picker service boundary', () => {
   it('uses normalized originals, forwards crop, deduplicates verified fonts and deletes uploads', async () => {
     const { session, fetch } = backend()
     const image = await session.upload(new Uint8Array([1, 2, 3]))
-    expect(image).toMatchObject({ id: 'image-a', width: 200, height: 100 })
+    expect(image).toMatchObject({ image_id: 'image-a', input_image: { width: 200, height: 100 } })
     expect(image.dataUrl).toMatch(/^data:image\/png;base64,/)
     const crop = { left: 10, top: 20, width: 80, height: 30 }
-    await session.scan(image.id, crop)
+    await session.scan(image.image_id, crop)
     const scan = fetch.mock.calls.find(([url]) => String(url).endsWith('/scans'))!
     expect(JSON.parse(String(scan[1]?.body))).toMatchObject({ image_id: 'image-a', crop_box: crop })
     const [a, b] = await Promise.all([session.font('font-a'), session.font('font-a')])
@@ -101,7 +101,7 @@ describe('font picker service boundary', () => {
   it('rejects corrupt font downloads and allows a later retry', async () => {
     const { session, fetch } = backend(true)
     const image = await session.upload(new Uint8Array([1]))
-    await session.scan(image.id, null)
+    await session.scan(image.image_id, null)
     await expect(session.font('font-a')).rejects.toThrow('checksum')
     await expect(session.font('font-a')).rejects.toThrow('checksum')
     expect(

@@ -1,4 +1,6 @@
-import { registerFontPicker, installedLensFonts } from './font-picker'
+import { ImageLabJobs } from './image-lab'
+import type { ImageLabRequest } from '../shared/image-lab'
+import { registerFontPicker, installedFontLabFonts } from './font-picker'
 /**
  * GenOffice Slides main process — pptx parsing/render-tree building/edit application/saving all live
  * here (Node side). The renderer only gets plain-data RenderSlide; edit intents are sent back
@@ -1100,7 +1102,7 @@ export function registerSlidesIpc(): void {
   })
   ipcMain.handle('slides:font-catalog', () => {
     const catalog = listFontCatalog()
-    const custom = new Set([...listInstalledUserFonts(), ...installedLensFonts()])
+    const custom = new Set([...listInstalledUserFonts(), ...installedFontLabFonts()])
     return [
       ...catalog.filter((font) => !custom.has(font.family)),
       ...[...custom].sort().map((family) => ({
@@ -1180,6 +1182,75 @@ export function registerSlidesIpc(): void {
     }
     return r
   }
+
+  const imageLabJobs = new ImageLabJobs()
+  const imageLabOwners = new Set<number>()
+  ipcMain.handle('slides:image-lab', (e, request: ImageLabRequest) => {
+    const owner = e.sender.id
+    if (!imageLabOwners.has(owner)) {
+      imageLabOwners.add(owner)
+      e.sender.once('destroyed', () => {
+        imageLabJobs.cancel(owner)
+        imageLabOwners.delete(owner)
+      })
+      e.sender.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
+        if (isMainFrame) imageLabJobs.cancel(owner)
+      })
+    }
+    return imageLabJobs.request(
+      owner,
+      request,
+      (slideIndex, sourceId) => {
+        const session = sessions.get(owner)
+        if (!session || session.masterEdit || !Number.isInteger(slideIndex))
+          throw new Error('Open a slide and select a picture.')
+        const opened = session.opened
+        const slide = opened.deck.slides[slideIndex]
+        const picture = slide?.elements.find((el) => el.id === sourceId)
+        const node = rebuildSlide(session, slideIndex)?.nodes.find((n) => n.sourceId === sourceId)
+        if (
+          !picture ||
+          picture.type !== 'picture' ||
+          picture.media ||
+          !node ||
+          node.type !== 'picture' ||
+          !node.dataUrl
+        ) {
+          throw new Error('Select a PNG, JPEG or WebP picture outside a group.')
+        }
+        const fingerprint = JSON.stringify(picture)
+        const isCurrent = () =>
+          sessions.get(owner) === session &&
+          session.opened === opened &&
+          !session.masterEdit &&
+          opened.deck.slides[slideIndex] === slide &&
+          JSON.stringify(slide.elements.find((el) => el.id === sourceId)) === fingerprint
+        return {
+          dataUrl: node.dataUrl,
+          slideIndex,
+          isCurrent,
+          apply: (bytes) => {
+            if (!isCurrent()) return null
+            const result = sessionTxn(session, {
+              ops: [
+                {
+                  op: 'replacePicture',
+                  target: { slide: slideIndex, el: sourceId },
+                  bytes,
+                  ext: 'png',
+                  keepSrcRect: true,
+                },
+              ],
+            })
+            return result ? rebuildSlide(session, slideIndex) : null
+          },
+        }
+      },
+      (progress) => {
+        if (!e.sender.isDestroyed()) e.sender.send('slides:image-lab-progress', progress)
+      },
+    )
+  })
 
   ipcMain.handle('slides:open', async (e, fitWidthPx: number) => {
     const parent = dialogParent()

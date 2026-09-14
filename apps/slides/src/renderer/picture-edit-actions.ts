@@ -1,3 +1,4 @@
+import type { ImageLabResult } from '../shared/image-lab'
 /**
  * Picture crop and cutout (background removal) actions. Extracted from
  * App.tsx; functions read the latest App state through ActionCtx.
@@ -75,7 +76,7 @@ export function cancelCrop(ctx: ActionCtx): void {
 
 // ── Picture cutout (background removal) ───────────────────────────────────────
 
-/** Enter cutout mode: a single selected picture (except audio/video poster frames) → open the tolerance preview dialog */
+/** Enter cutout mode: a single selected picture (except audio/video poster frames) → open the automatic background removal dialog */
 export function startCutout(ctx: ActionCtx): void {
   if (!ctx.slide || ctx.selectedIds.length !== 1) return
   const node = ctx.slide.nodes.find((n) => n.sourceId === ctx.selectedIds[0])
@@ -89,7 +90,12 @@ export function startCutout(ctx: ActionCtx): void {
     ctx.setStatus(t('appStatusCutoutNoData'))
     return
   }
-  ctx.setCutoutTarget({ sourceId: pic.sourceId, dataUrl: pic.dataUrl })
+  ctx.setCutoutTarget({
+    sourceId: pic.sourceId,
+    dataUrl: pic.dataUrl,
+    slideIndex: ctx.current,
+    path: ctx.path,
+  })
 }
 
 /**
@@ -98,30 +104,18 @@ export function startCutout(ctx: ActionCtx): void {
  * border and effects all survive; the crop window is kept because the result
  * PNG shares the source image's pixel geometry.
  */
-export async function applyCutout(ctx: ActionCtx, pngDataUrl: string): Promise<void> {
-  if (!ctx.cutoutTarget || !ctx.slide) return
-  const targetId = ctx.cutoutTarget.sourceId
-  const node = ctx.slide.nodes.find((n) => n.sourceId === targetId)
+export function applyCutout(ctx: ActionCtx, result: Extract<ImageLabResult, { ok: true }>): void {
+  const target = ctx.cutoutTarget
+  if (
+    !target ||
+    ctx.path !== target.path ||
+    !result.slide ||
+    result.slideIndex !== target.slideIndex
+  )
+    return
+  ctx.applySlide(target.slideIndex, result.slide)
   ctx.setCutoutTarget(null)
-  if (!node || node.type !== 'picture') return
-  const base64 = pngDataUrl.split(',')[1]
-  if (!base64) {
-    ctx.setStatus(t('appStatusCutoutEncodeFailed'))
-    return
-  }
-  const updated = await window.slidesApi.replacePictureBytes({
-    slideIndex: ctx.current,
-    sourceId: targetId,
-    base64,
-    ext: 'png',
-    keepSrcRect: true,
-  })
-  if (!updated || 'error' in updated) {
-    ctx.setStatus(t('appStatusCutoutInsertFailed'))
-    return
-  }
-  ctx.applySlide(ctx.current, updated)
-  ctx.setSelectedIds([targetId])
+  if (ctx.current === target.slideIndex) ctx.setSelectedIds([target.sourceId])
   ctx.setDirty(true)
   ctx.setStatus(t('appStatusCutoutDone'))
 }

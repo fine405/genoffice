@@ -1,3 +1,4 @@
+import type { ImageLabRequest, ImageLabResult, ImageLabProgress } from './image-lab'
 import type { FontProgress, PickerRequest, PickerResult } from '@genoffice/font-picker/types'
 import type { AiPanelPrefs } from '@genoffice/ui'
 /**
@@ -1217,6 +1218,8 @@ export interface SlidesApi {
   fontDownload: (family: string) => Promise<{ ok: boolean; error?: string }>
   /** File picker → install local font files into the user font store */
   fontInstallLocal: () => Promise<{ families: string[] }>
+  imageLab: (request: ImageLabRequest) => Promise<ImageLabResult>
+  onImageLabProgress: (handler: (progress: ImageLabProgress) => void) => () => void
   fontPicker: (request: PickerRequest) => Promise<PickerResult<unknown>>
   onFontPickerProgress: (handler: (progress: FontProgress) => void) => () => void
   /** Families this deck references that are missing locally but downloadable */

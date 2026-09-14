@@ -55,9 +55,9 @@ const BUNDLED_FONTS: Record<string, string> = {
  * to Chromium, so faces resolved from here get the same private FontFace treatment as
  * Office DFonts.
  */
-let lensFontDir: string | null = null
-export function setLensFontDir(dir: string): void {
-  lensFontDir = dir
+let fontLabDir: string | null = null
+export function setFontLabDir(dir: string): void {
+  fontLabDir = dir
 }
 let userFontDir: string | null = null
 export function setUserFontDir(dir: string): void {
@@ -638,9 +638,9 @@ class FontRegistry {
       this.privateDirs.push(userFontDir)
       this.scanFlatDir(userFontDir)
     }
-    if (lensFontDir) {
-      this.privateDirs.push(lensFontDir)
-      this.scanFlatDir(lensFontDir)
+    if (fontLabDir) {
+      this.privateDirs.push(fontLabDir)
+      this.scanFlatDir(fontLabDir)
     }
     for (const dir of officeFontDirs()) {
       this.privateDirs.push(dir)
@@ -1187,7 +1187,7 @@ export function createSystemFontMetrics(): FontMetricsProvider {
     }
     // Downloaded static faces use their full names so Medium/SemiBold variants
     // have independent CSS registrations and survive Office save/reopen.
-    if (raw && lensFontDir && raw.path.startsWith(lensFontDir + sep)) {
+    if (raw && fontLabDir && raw.path.startsWith(fontLabDir + sep)) {
       raw.family = style.fontFamily
     }
     if (raw && registry.isPrivate(raw.path)) {

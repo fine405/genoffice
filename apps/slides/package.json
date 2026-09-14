@@ -88,10 +88,11 @@
   },
   "dependencies": {
     "@genoffice/electron-utils": "*",
+    "@genoffice/font-picker": "*",
+    "@image-lab/client": "file:../../vendor/image-lab-client-0.1.0.tgz",
     "acorn": "^8.18.0",
     "harfbuzzjs": "^1.4.0",
     "pngjs": "^7.0.0",
-    "utif2": "^4.1.0",
-    "@genoffice/font-picker": "*"
+    "utif2": "^4.1.0"
   }
 }

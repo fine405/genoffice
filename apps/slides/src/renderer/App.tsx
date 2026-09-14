@@ -1,4 +1,4 @@
-import { useLensFontPicker } from './lens-font-picker'
+import { useFontLabPicker } from './font-lab-picker'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   GroupRenderNode,
@@ -352,7 +352,7 @@ export function App() {
   const [drawKind, setDrawKind] = useState<InsertKind | null>(null)
   /** Latest-state bundle for the extracted action modules; refreshed every render (see action-context.ts). */
   const ctxRef = useRef<ActionCtx>(null as unknown as ActionCtx)
-  const fontPicker = useLensFontPicker(ctxRef, lang)
+  const fontPicker = useFontLabPicker(ctxRef, lang)
   const [zoom, setZoom] = useState(1)
   /** unscaled layout size of .stage-scale — its transform-scaled visual size is
    * scaleBox * zoom, which the wrapper zoom-box adopts so scrolling can reach it all */
@@ -1760,7 +1760,8 @@ export function App() {
   const startCutout = useCallback(() => pictureEditActions.startCutout(ctxRef.current), [])
   const replacePicture = useCallback(() => pictureEditActions.replacePicture(ctxRef.current), [])
   const applyCutout = useCallback(
-    (pngDataUrl: string) => pictureEditActions.applyCutout(ctxRef.current, pngDataUrl),
+    (result: Parameters<typeof pictureEditActions.applyCutout>[1]) =>
+      pictureEditActions.applyCutout(ctxRef.current, result),
     [],
   )
 
@@ -4068,10 +4069,10 @@ export function App() {
         />
       )}
 
-      {cutoutTarget && (
+      {cutoutTarget && cutoutTarget.path === path && (
         <CutoutDialog
-          dataUrl={cutoutTarget.dataUrl}
-          onApply={(png) => void applyCutout(png)}
+          target={cutoutTarget}
+          onApply={applyCutout}
           onCancel={() => setCutoutTarget(null)}
         />
       )}

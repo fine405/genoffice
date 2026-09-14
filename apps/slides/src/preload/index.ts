@@ -124,6 +124,13 @@ const api: SlidesApi = {
   setShowFullScreen: (on) => ipcRenderer.invoke('slides:show-fullscreen', on),
   privateFontFaces: () => ipcRenderer.invoke('slides:private-font-faces'),
   privateFontData: (id) => ipcRenderer.invoke('slides:private-font-data', id),
+  imageLab: (request) => ipcRenderer.invoke('slides:image-lab', request),
+  onImageLabProgress: (handler) => {
+    const listener = (_event: IpcRendererEvent, progress: Parameters<typeof handler>[0]) =>
+      handler(progress)
+    ipcRenderer.on('slides:image-lab-progress', listener)
+    return () => ipcRenderer.removeListener('slides:image-lab-progress', listener)
+  },
   fontPicker: (request) => ipcRenderer.invoke('slides:font-picker', request),
   onFontPickerProgress: (handler) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: Parameters<typeof handler>[0]) =>

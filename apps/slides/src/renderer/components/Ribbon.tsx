@@ -3043,7 +3043,9 @@ export function Ribbon({
               <button
                 className="rb-big"
                 data-tip={
-                  contextPictureCanCutout ? t('ribbonRemoveBgTip') : t('ribbonRemoveBgDisabledTip')
+                  contextPictureCanCutout
+                    ? t('ribbonRemoveBg') + '（Preview）'
+                    : t('ribbonRemoveBgDisabledTip')
                 }
                 disabled={!onPictureCutout || !contextPictureCanCutout}
                 onClick={onPictureCutout}
@@ -3053,7 +3055,7 @@ export function Ribbon({
                       icon-row height (and label line) identical to its neighbors */}
                   <IconRemoveBg size={BIG} />
                 </span>
-                <span>{t('ribbonRemoveBg')}</span>
+                <span>{t('ribbonRemoveBg') + '（Preview）'}</span>
               </button>
               <button
                 className="rb-big"

@@ -1,12 +1,14 @@
-import type { CropBox, FontDetails, ScanResult } from '@lens/sdk'
-export type { CropBox, FontDetails, FontMatch, FontVariant, Region, ScanResult } from '@lens/sdk'
+import type { CropBox, FontDetails, ImageResource, ScanResult } from '@font-lab/sdk'
+export type {
+  CropBox,
+  FontDetails,
+  FontMatch,
+  FontVariant,
+  Region,
+  ScanResult,
+} from '@font-lab/sdk'
 
-export interface PickerImage {
-  id: string
-  dataUrl: string
-  width: number
-  height: number
-}
+export type PickerImage = ImageResource & { dataUrl: string }
 export interface FontFile {
   font: FontDetails
   bytes: Uint8Array

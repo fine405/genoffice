@@ -40,7 +40,8 @@ export default defineConfig({
       externalizeDepsPlugin({
         exclude: [
           '@genoffice/font-picker',
-          '@lens/sdk',
+          '@font-lab/sdk',
+          '@image-lab/client',
           '@genoffice/pptx-engine',
           '@genoffice/pptx-render',
           '@genoffice/ai-search',

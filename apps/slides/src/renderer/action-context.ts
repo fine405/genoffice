@@ -62,6 +62,8 @@ export interface CropTargetState {
 }
 
 export interface CutoutTargetState {
+  slideIndex: number
+  path: string | null
   sourceId: string
   dataUrl: string
 }

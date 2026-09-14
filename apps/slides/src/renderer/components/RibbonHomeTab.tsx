@@ -577,8 +577,10 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
                 >
                   <div className="rb-menu-scroll">
                     {customFonts.some((font) => matchesFontFilter(font.family)) && (
-                      <div role="group" aria-label={t('ribbonFontsCustom')}>
-                        <div className="rb-menu-group-label">{t('ribbonFontsCustom')}</div>
+                      <div role="group" aria-label={t('ribbonFontsCustom') + '（Preview）'}>
+                        <div className="rb-menu-group-label">
+                          {t('ribbonFontsCustom') + '（Preview）'}
+                        </div>
                         {customFonts
                           .filter((font) => matchesFontFilter(font.family))
                           .map((font) => (

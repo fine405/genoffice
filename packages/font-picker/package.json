@@ -16,7 +16,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@lens/sdk": "file:../../vendor/lens-sdk-0.1.1.tgz"
+    "@font-lab/sdk": "file:../../vendor/font-lab-sdk-0.2.0.tgz",
+    "react-image-crop": "^11.1.2"
   },
   "peerDependencies": {
     "react": "^19.0.0"

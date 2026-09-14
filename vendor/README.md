@@ -1,16 +1,21 @@
-# Lens SDK snapshot
+# Font Lab SDK snapshot
 
-`lens-sdk-0.1.1.tgz` is an npm-packed build of `packages/sdk` from the local
-`lens-web` project. It exposes the independent Lens v1 HTTP client used by
-`@genoffice/font-picker`, with no runtime dependencies. It contains no model
-weights, inference implementation or downloaded font files.
+`font-lab-sdk-0.2.0.tgz` is an npm-packed build of `packages/sdk-typescript`
+from `font-lab` (source commit `bea8a36`). It supplies the generated OpenAPI
+contract, HTTP client and browser preview lifecycle used by
+`@genoffice/font-picker`. The archive includes its Apache-2.0 LICENSE and no
+models, recognition runtime or font files.
 
-The package has not been published to a registry. Keeping the snapshot here
-makes a checkout installable without a sibling workspace or private registry.
-To update it, build the SDK in `lens-web`, run `npm pack` from its `packages/sdk`
-directory, copy the resulting archive here, then update the dependency and
-GenOffice lockfile together.
+To refresh, run `pnpm build` and `npm pack` in Font Lab's
+`packages/sdk-typescript`, copy the archive here, update the picker dependency
+and run `npm install` in GenOffice. Keep the package and lockfile together.
+Third-party models and fonts retain their own licenses.
 
-The SDK code is licensed under Apache-2.0 by its author. The archive includes
-its LICENSE file. This applies only to the SDK, not to the Lens model, inference
-implementation or font files, whose permissions remain independent.
+# Image Lab client — local development only
+
+`image-lab-client-0.1.0.tgz` is an npm-packed build of Image Lab's
+`clients/typescript`. It contains the HTTP client only, without models or a
+Python runtime. The SDK has no declared license. Its owner chose to retain
+local development integration without licensing it on 2026-09-14; release
+license checks must continue to reject this dependency until that is resolved.
+Do not infer a license from GenOffice or the Font Lab SDK.

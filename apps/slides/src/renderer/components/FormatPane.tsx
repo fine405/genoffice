@@ -1687,7 +1687,7 @@ export function FormatPane({
                     data-tip={pictureCanCutout ? t('paneFormatCutoutTip') : t('paneFormatCutoutNA')}
                     onClick={() => onPictureCutout?.()}
                   >
-                    {t('paneCutoutTitle')}
+                    {t('paneCutoutTitle') + '（Preview）'}
                   </button>
                 </div>
               )}
