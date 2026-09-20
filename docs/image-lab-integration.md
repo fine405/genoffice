@@ -7,6 +7,11 @@ algorithm has been removed. Other editors keep their existing behavior.
 
 ## Local development
 
+Use `make start`, `make stop` and `make status` in GenOffice for the integrated
+workflow. It connects both Lab APIs and supplies the Image Lab token file
+automatically; see [local development](local-development.md). The manual workflow
+below remains available.
+
 Start Image Lab with `make dev` in its repository. Prepare its model as described
 in Image Lab's README (`make prepare` for a new setup). Then launch GenOffice
 with the token file available to its main process:

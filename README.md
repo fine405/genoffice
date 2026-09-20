@@ -256,6 +256,10 @@ agent core and providers) lives in [CONTRIBUTING.md](CONTRIBUTING.md#engine-pack
 
 ## Development
 
+For this branch’s Font Lab and Image Lab integration, use `make start`, `make stop`,
+and `make status` on macOS/Linux. See [local development](docs/local-development.md)
+for setup, paths and logs.
+
 ```bash
 npm install
 npm run fixtures     # generate test .docx fixtures
@@ -273,8 +277,8 @@ The sheets app additionally needs a Rust toolchain for its xlsx sidecar
 automatically. See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks every
 change must pass and how pull requests land.
 
-Slides also includes an optional Lens image font picker. Start its separate
-Python service, then use the font dropdown or a picture's context menu. See
+Slides also includes a Font Lab image font picker. `make start` connects its
+API; use the font dropdown or a picture's context menu. See
 [font picker setup and limitations](packages/font-picker/README.md).
 
 ## Community
