@@ -94,38 +94,18 @@
   display: flex;
   align-items: stretch;
 }
-.bc-entry-menu > details {
+.bc-entry-menu > .menu-select {
   align-self: center;
 }
-.bc-entry-menu summary {
-  cursor: pointer;
-  list-style: none;
-  padding: 8px 3px;
-}
-.bc-entry-menu .bc-menu {
-  position: absolute;
-  z-index: 100;
-  min-width: 210px;
-  top: 100%;
-  left: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px;
-}
-.bc-menu button {
-  display: block;
-  width: 100%;
+.bc-mode-trigger {
+  display: flex;
+  align-items: center;
   border: 0;
-  padding: 9px;
-  text-align: left;
+  padding: 8px 3px;
   font: inherit;
   color: inherit;
   background: transparent;
   cursor: pointer;
-}
-.bc-menu button:hover {
-  background: var(--surface-hover);
 }
 
 .business-check summary {

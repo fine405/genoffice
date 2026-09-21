@@ -2612,27 +2612,23 @@ function Ribbon({
               <strong>{t('aiCheckBtn')}</strong>
             </span>
           </button>
-          <details>
-            <summary aria-label={lang.startsWith('zh') ? '校验模式' : 'Check mode'}>▾</summary>
-            <div className="bc-menu">
-              <button
-                onClick={(e) => {
-                  e.currentTarget.closest('details')?.removeAttribute('open')
-                  onAiRun(t('aiCheckPrompt'))
-                }}
-              >
-                {lang.startsWith('zh') ? '通用校验' : 'General check'}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.currentTarget.closest('details')?.removeAttribute('open')
-                  onBusinessCheck()
-                }}
-              >
-                {lang.startsWith('zh') ? '业务一致性（预览版）' : 'Business consistency (Preview)'}
-              </button>
-            </div>
-          </details>
+          <MenuSelect
+            label={lang.startsWith('zh') ? '校验模式' : 'Check mode'}
+            className="bc-mode-trigger"
+            options={[
+              { value: 'general', label: lang.startsWith('zh') ? '通用校验' : 'General check' },
+              {
+                value: 'business',
+                label: lang.startsWith('zh')
+                  ? '业务一致性（预览版）'
+                  : 'Business consistency (Preview)',
+              },
+            ]}
+            onPick={(mode) => {
+              if (mode === 'business') onBusinessCheck()
+              else onAiRun(t('aiCheckPrompt'))
+            }}
+          />
         </div>
         <button
           className="ribbon-tool as-button large ai-entry"
