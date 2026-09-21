@@ -1,3 +1,8 @@
+import {
+  followSettings,
+  saveJevKey,
+  chooseWhisper,
+} from '../../../slides/src/main/ai-service-settings'
 import { execSync, spawn } from 'node:child_process'
 import {
   copyFileSync,
@@ -2847,6 +2852,20 @@ function statEntries(paths: string[]): RecentEntry[] {
 }
 
 function registerHomeIpc(): void {
+  ipcMain.handle('home:ai-services', (event) => {
+    if (event.sender !== shellWindow?.webContents) throw new Error('Invalid settings window')
+    return followSettings()
+  })
+  ipcMain.handle('home:jev-key', (event, key: string) => {
+    if (event.sender !== shellWindow?.webContents) throw new Error('Invalid settings window')
+    saveJevKey(key)
+  })
+
+  ipcMain.handle('home:choose-whisper', (event, kind: string) => {
+    if (event.sender !== shellWindow?.webContents) throw new Error('Invalid settings window')
+    return chooseWhisper(kind)
+  })
+
   // signed-in means GenOffice's own device-code login; the shared gsk CLI key
   // is only a silent fallback, deliberately not shown here to nudge users onto our key
   ipcMain.handle(HOME_CHANNELS.accountStatus, async () => {

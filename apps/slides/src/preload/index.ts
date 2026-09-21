@@ -424,6 +424,13 @@ const api: SlidesApi = {
   ) => ipcRenderer.invoke('ai:save-style-template', name, data),
   listStyleTemplates: () => ipcRenderer.invoke('ai:list-style-templates'),
   loadStyleTemplate: (name: string) => ipcRenderer.invoke('ai:load-style-template', name),
+  voiceFollow: {
+    status: () => ipcRenderer.invoke('slides:follow-status'),
+    prepare: (cards) => ipcRenderer.invoke('slides:follow-prepare', cards),
+    judge: (request) => ipcRenderer.invoke('slides:follow-judge', request),
+    cancel: () => ipcRenderer.invoke('slides:follow-cancel'),
+    transcribe: (wav) => ipcRenderer.invoke('slides:follow-transcribe', wav),
+  },
   presenterStart: () => ipcRenderer.invoke('slides:presenter-start'),
   presenterSync: (state: ShowSyncState) => ipcRenderer.send('slides:presenter-sync', state),
   presenterInk: (ev: ShowInkEvent) => ipcRenderer.send('slides:presenter-ink', ev),

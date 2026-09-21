@@ -1,3 +1,4 @@
+import type { AiServiceSettings } from '../../../../slides/src/shared/voice-follow'
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
@@ -238,6 +239,118 @@ function Field({
         </div>
       </div>
       {action}
+    </div>
+  )
+}
+
+function AiServicesSettings({ t }: { t: TFunc }) {
+  const [key, setKey] = useState('')
+  const [services, setServices] = useState<AiServiceSettings | null>(null)
+  const ready = services?.jevReady ?? false
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let alive = true
+    void window.aiOffice
+      .getAiServiceSettings?.()
+      .then((value) => {
+        if (alive) setServices(value)
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
+  const save = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      await window.aiOffice.setJevKey(key)
+      setKey('')
+      setServices(await window.aiOffice.getAiServiceSettings())
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSaving(false)
+    }
+  }
+  const selectWhisper = async (kind: 'binary' | 'model') => {
+    setSaving(true)
+    setError('')
+    try {
+      setServices(await window.aiOffice.chooseWhisper(kind))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <div className="set-ai-services">
+      <h3 className="set-pane-title">语义判断与语音识别（预览版）</h3>
+      <div className="set-field">
+        <div className="set-field-text">
+          <div className="set-field-stack">
+            <label className="set-field-label" htmlFor="set-jev-key">
+              Jev API Key
+            </label>
+            <div className="set-field-desc">用于 PPT 语义翻页及文字模拟，由系统加密保存。</div>
+          </div>
+        </div>
+        <input
+          id="set-jev-key"
+          className="set-input"
+          type="password"
+          value={key}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={ready ? '已配置，输入可替换' : 'API Key'}
+          onChange={(event) => setKey(event.target.value)}
+        />
+      </div>
+      <div className="set-pane-footer">
+        <span role="status">{error || (ready ? 'Jev 已配置' : 'Jev 未配置')}</span>
+        <button
+          className="set-btn primary"
+          disabled={!key.trim() || saving}
+          onClick={() => void save()}
+        >
+          {t('setAiSave')} Jev
+        </button>
+      </div>
+      <div className="set-field-desc set-ai-note">
+        DeepSeek 复用上方服务商中保存的 API Key 和 Base URL。以下配置供所有演示共用。
+      </div>
+      <div className="set-field">
+        <div className="set-field-text">
+          <div className="set-field-stack">
+            <span className="set-field-label">语音识别程序（whisper-cli）</span>
+            <div className="set-field-desc" title={services?.whisperBinaryPath}>
+              {services?.whisperBinaryPath || '尚未找到程序'}
+            </div>
+          </div>
+        </div>
+        <button className="set-btn" disabled={saving} onClick={() => void selectWhisper('binary')}>
+          选择程序
+        </button>
+      </div>
+      <div className="set-field">
+        <div className="set-field-text">
+          <div className="set-field-stack">
+            <span className="set-field-label">语音模型（多语言 .bin）</span>
+            <div className="set-field-desc" title={services?.whisperModelPath}>
+              {services?.whisperModel || '尚未选择模型'}
+            </div>
+          </div>
+        </div>
+        <button className="set-btn" disabled={saving} onClick={() => void selectWhisper('model')}>
+          选择语音模型
+        </button>
+      </div>
+      <p className="set-field-desc">
+        {services?.whisperReady ? '本地语音识别已就绪。' : '请安装 whisper-cli 并选择多语言模型。'}
+        文字模拟无需语音配置。
+      </p>
     </div>
   )
 }
@@ -546,6 +659,7 @@ function AiModelPane({ t }: { t: TFunc }) {
           {t('setAiSave')}
         </button>
       </div>
+      <AiServicesSettings t={t} />
     </>
   )
 }

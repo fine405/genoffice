@@ -252,6 +252,7 @@ const lastSlidePaste = new Map<number, { afterIndex: number; undoLen: number }>(
 const CLOUD_PAGE_PREFIX = 'cloudpptx:'
 const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
+import { registerVoiceFollowIpc } from './voice-follow-ipc'
 import { registerAttachmentIpc } from './attachments-ipc'
 
 export {
@@ -4336,6 +4337,7 @@ export function registerSlidesIpc(): void {
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell
   // aggregate mode only calls this function) ──
   registerPresenterIpc()
+  registerVoiceFollowIpc()
 
   registerSlidesOnlyAiIpc()
 }

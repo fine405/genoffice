@@ -1,3 +1,5 @@
+import { previewSuffix } from '../image-lab-strings'
+import { getLang } from '../i18n/locale'
 /**
  * Anchored input for annotating the selected element(s) with one AI edit.
  *
@@ -300,7 +302,7 @@ export function AiAskPopover({
             }}
           >
             {t(key)}
-            {key === 'aiChipRemoveBg' ? '（Preview）' : ''}
+            {key === 'aiChipRemoveBg' ? previewSuffix(getLang()) : ''}
           </button>
         ))}
       </div>

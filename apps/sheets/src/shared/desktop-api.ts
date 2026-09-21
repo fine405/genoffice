@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { BusinessCheckApi } from './business-check'
 
 import {
   HEADER_FOOTER_PICTURE_POSITION,
@@ -2728,6 +2729,7 @@ export interface RecoveryPromptPayload {
 }
 
 export interface DesktopApi {
+  businessCheck: BusinessCheckApi
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage(): Promise<'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'>
   /** language switched from the shell home page */

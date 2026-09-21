@@ -1,3 +1,4 @@
+import { registerBusinessCheckIpc } from './business-check-ipc'
 import { createHash, randomUUID } from 'node:crypto'
 import {
   createReadStream,
@@ -2177,6 +2178,7 @@ let coreIpcRegistered = false
 export function registerSheetsIpc(): void {
   if (coreIpcRegistered) return
   coreIpcRegistered = true
+  registerBusinessCheckIpc(sessionFor)
 
   // Registered here (not in registerSheetsAiIpc, skipped in shell mode):
   // slides' ai:generate-image only exists once a slides view opens, so sheets

@@ -1,3 +1,4 @@
+import type { AiServiceSettings } from '../../../slides/src/shared/voice-follow'
 import type {
   AiChatResponse,
   AiMediaProviderConfig,
@@ -181,7 +182,10 @@ export interface HomeApi {
   cloudProjectsSync(): Promise<CloudProjectsSnapshot | null>
   /** open a cloud project (relative '/agents?id=...' URL) in the default browser */
   openCloudProject(projectUrl: string): Promise<void>
-  /** AI settings (userData/ai-settings.json, shared by every editor); the genspark key never appears here */
+  /** Global semantic and speech services; never returns credentials. */
+  getAiServiceSettings(): Promise<AiServiceSettings>
+  chooseWhisper(kind: 'binary' | 'model'): Promise<AiServiceSettings>
+  setJevKey(key: string): Promise<void>
   getAiSettings(): Promise<AiSettings>
   /** persist AI settings; open editors pick the change up on their next settings read */
   setAiSettings(settings: AiSettings): Promise<void>

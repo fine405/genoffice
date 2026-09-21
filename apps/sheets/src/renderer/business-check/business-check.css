@@ -1,0 +1,141 @@
+.business-check {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.business-check h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.business-check p {
+  margin: 6px 0;
+  white-space: pre-wrap;
+}
+.business-check fieldset {
+  border: 0;
+  padding: 0;
+  margin: 16px 0;
+  min-width: 0;
+}
+.business-check legend {
+  font-weight: 600;
+}
+.business-check label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}
+.business-check input,
+.business-check select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  box-shadow: none;
+}
+.business-check button,
+.bc-tabs button {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+.business-check button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.business-check select:focus {
+  outline: none;
+  box-shadow: none;
+}
+.bc-muted {
+  color: var(--text-muted);
+}
+.bc-row,
+.bc-metrics,
+.bc-summary {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+.bc-result {
+  margin: 8px 0;
+}
+.bc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+.bc-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.bc-tabs button[aria-pressed='true'] {
+  font-weight: 600;
+  background: var(--surface-hover);
+}
+.bc-entry-menu {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.bc-entry-menu > details {
+  align-self: center;
+}
+.bc-entry-menu summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 3px;
+}
+.bc-entry-menu .bc-menu {
+  position: absolute;
+  z-index: 100;
+  min-width: 210px;
+  top: 100%;
+  left: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px;
+}
+.bc-menu button {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 9px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.bc-menu button:hover {
+  background: var(--surface-hover);
+}
+
+.business-check summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.bc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

@@ -1,3 +1,5 @@
+import { previewSuffix } from '../image-lab-strings'
+import { getLang } from '../i18n/locale'
 /**
  * Ribbon: tab bar + grouped buttons. Same mechanism as the apps/docs Ribbon
  * (local state switches tabs, .ribbon-body dispatches); content is trimmed to slide capabilities,
@@ -2423,6 +2425,17 @@ export function Ribbon({
               <button
                 className="rb-big"
                 disabled={!hasDoc}
+                onClick={() => onPresenterView(false, true)}
+                data-tip="通过麦克风或文字讲述自动定位幻灯片"
+              >
+                <span className="rb-big-icon">
+                  <IconPresenterView size={BIG} />
+                </span>
+                <span>语音跟随（预览版）</span>
+              </button>
+              <button
+                className="rb-big"
+                disabled={!hasDoc}
                 onClick={onCustomShow}
                 data-tip={t('ribbonCustomShowTip')}
               >
@@ -3044,7 +3057,7 @@ export function Ribbon({
                 className="rb-big"
                 data-tip={
                   contextPictureCanCutout
-                    ? t('ribbonRemoveBg') + '（Preview）'
+                    ? t('ribbonRemoveBg') + previewSuffix(getLang())
                     : t('ribbonRemoveBgDisabledTip')
                 }
                 disabled={!onPictureCutout || !contextPictureCanCutout}
@@ -3055,7 +3068,7 @@ export function Ribbon({
                       icon-row height (and label line) identical to its neighbors */}
                   <IconRemoveBg size={BIG} />
                 </span>
-                <span>{t('ribbonRemoveBg') + '（Preview）'}</span>
+                <span>{t('ribbonRemoveBg') + previewSuffix(getLang())}</span>
               </button>
               <button
                 className="rb-big"

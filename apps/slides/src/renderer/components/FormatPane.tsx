@@ -1,3 +1,5 @@
+import { previewSuffix } from '../image-lab-strings'
+import { getLang } from '../i18n/locale'
 /**
  * Format pane (a trimmed-down PowerPoint Format Pane): position/size/rotation/fill of the
  * selected element. Shares the right dock area with the AI panel, mutually exclusive. Inputs
@@ -1687,7 +1689,7 @@ export function FormatPane({
                     data-tip={pictureCanCutout ? t('paneFormatCutoutTip') : t('paneFormatCutoutNA')}
                     onClick={() => onPictureCutout?.()}
                   >
-                    {t('paneCutoutTitle') + '（Preview）'}
+                    {t('paneCutoutTitle') + previewSuffix(getLang())}
                   </button>
                 </div>
               )}

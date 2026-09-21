@@ -1,3 +1,4 @@
+import type { AiServiceSettings } from '../../../slides/src/shared/voice-follow'
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import {
@@ -270,6 +271,15 @@ const homeApi: HomeApi = {
     await ipcRenderer.invoke(HOME_CHANNELS.openCloudProject, projectUrl)
   },
   // AI settings channels are registered once by the shell's aggregated docs handlers
+  async getAiServiceSettings() {
+    return (await ipcRenderer.invoke('home:ai-services')) as AiServiceSettings
+  },
+  async chooseWhisper(kind) {
+    return (await ipcRenderer.invoke('home:choose-whisper', kind)) as AiServiceSettings
+  },
+  async setJevKey(key) {
+    await ipcRenderer.invoke('home:jev-key', key)
+  },
   async getAiSettings() {
     return (await ipcRenderer.invoke('ai:get-settings')) as AiSettings
   },

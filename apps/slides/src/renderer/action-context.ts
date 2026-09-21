@@ -145,8 +145,8 @@ export interface ActionCtx {
   // Show / presenter / rehearse
   slideShow: SlideShowState | null
   setSlideShow: Set<SlideShowState | null>
-  presenter: { startAt: number } | null
-  setPresenter: Set<{ startAt: number } | null>
+  presenter: { startAt: number; follow?: boolean } | null
+  setPresenter: Set<{ startAt: number; follow?: boolean } | null>
   setCustomShows: Set<CustomShow[]>
   setCustomShowDlgOpen: Set<boolean>
   pendingRehearse: number[] | null

@@ -192,6 +192,8 @@ interface ExcelShellProps {
   readonly onUndo: (steps?: number) => void
   /// A1 notation of the multi-cell selection the AI composer offers as this
   /// run's scope, or null when the resting single-cell selection carries none.
+  readonly onBusinessCheck: () => void
+  readonly businessCheckPanel: React.ReactNode
   readonly aiScopeRange: string | null
   /// Header names when that scope covers whole columns: they label the chip in
   /// place of the range, because a column is a name to the user, not a letter.
@@ -353,6 +355,8 @@ export function ExcelShell({
   onStop,
   onNewChat,
   onUndo,
+  onBusinessCheck,
+  businessCheckPanel,
   aiScopeRange,
   aiScopeColumns,
   aiScopeLocked,
@@ -378,10 +382,11 @@ export function ExcelShell({
   calcManual,
   onGoalSeek,
 }: ExcelShellProps): React.JSX.Element {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [activeTab, setActiveTab] = useState<RibbonTab>('Home')
   const collapse = useRibbonCollapse('ai-sheets-ribbon-collapsed')
   // Persisted so a closed AI panel stays closed on next launch (docs/slides parity)
+  const [aiView, setAiView] = useState<'chat' | 'check'>('chat')
   const [isCopilotOpen, setIsCopilotOpen] = useState(
     () => localStorage.getItem('ai-sheets-show-ai') !== '0',
   )
@@ -635,7 +640,13 @@ export function ExcelShell({
             else if (command === 'chart-element-axis-val') setChartTextTarget('axis-value')
             else onCommand(command)
           }}
+          onBusinessCheck={() => {
+            onBusinessCheck()
+            setAiView('check')
+            setIsCopilotOpen(true)
+          }}
           onAiRun={(nextPrompt) => {
+            setAiView('chat')
             setIsCopilotOpen(true)
             onSend(nextPrompt)
           }}
@@ -651,6 +662,23 @@ export function ExcelShell({
       {/* AI panel docks on the left, full height under the ribbon (unified with docs) */}
       <div className="sheet-body">
         <AiChatPanel
+          tabs={
+            <div className="bc-tabs">
+              <button aria-pressed={aiView === 'chat'} onClick={() => setAiView('chat')}>
+                {lang.startsWith('zh') ? '对话' : 'Chat'}
+              </button>
+              <button
+                aria-pressed={aiView === 'check'}
+                onClick={() => {
+                  if (aiView !== 'check') onBusinessCheck()
+                  setAiView('check')
+                }}
+              >
+                {lang.startsWith('zh') ? '校验' : 'Check'}
+              </button>
+            </div>
+          }
+          alternateContent={aiView === 'check' ? businessCheckPanel : undefined}
           isOpen={isCopilotOpen}
           hasContent={sheetHasContent}
           chat={chat}
@@ -695,6 +723,11 @@ export function ExcelShell({
           </section>
           {aiSelectionAskAnchor && aiScopeRange && !aiBusy && (
             <AiSelectionAsk
+              onBusinessCheck={() => {
+                onBusinessCheck()
+                setAiView('check')
+                setIsCopilotOpen(true)
+              }}
               anchor={aiSelectionAskAnchor}
               range={aiScopeRange}
               onDismiss={onAiSelectionAskDismiss}
@@ -1254,6 +1287,7 @@ function Ribbon({
   selectedChart,
   onCommand,
   onAiRun,
+  onBusinessCheck,
   aiOpen,
   onAiToggle,
   onListNames,
@@ -1278,13 +1312,14 @@ function Ribbon({
   readonly calcManual: boolean
   /** Open the AI panel and immediately send the given prompt */
   readonly onAiRun: (prompt: string) => void
+  readonly onBusinessCheck: () => void
   /** AI side panel visibility (docs/slides parity: the entry button toggles it) */
   readonly aiOpen: boolean
   readonly onAiToggle: () => void
   readonly onRefreshPivot: () => string | null
   readonly onIsSelectionInPivot: () => boolean
 }): React.JSX.Element {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [fontColor, setFontColor] = useState('#C00000')
   const [fillColor, setFillColor] = useState('#FFF2CC')
   const [borderColor, setBorderColor] = useState('#000000')
@@ -2547,35 +2582,58 @@ function Ribbon({
             <strong>Genspark AI</strong>
           </span>
         </button>
-        <button
-          className="ribbon-tool as-button large ai-entry"
-          disabled={!sheetHasContent}
-          data-tip={t('aiCheckBtn')}
-          onClick={() => onAiRun(t('aiCheckPrompt'))}
-        >
-          <span className="tool-icon-row">
-            <span className="ai-feature-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M11 3.25C15.2802 3.25 18.75 6.71979 18.75 11C18.75 15.2802 15.2802 18.75 11 18.75C6.71979 18.75 3.25 15.2802 3.25 11C3.25 6.71979 6.71979 3.25 11 3.25Z" />
-                <path
-                  d="M7.5 10.8235L9.64097 12.9645C9.93755 13.2611 10.4177 13.2634 10.7171 12.9697L14.7647 9"
+        <div className="bc-entry-menu">
+          <button
+            className="ribbon-tool as-button large ai-entry"
+            disabled={!sheetHasContent}
+            data-tip={t('aiCheckBtn')}
+            onClick={() => onAiRun(t('aiCheckPrompt'))}
+          >
+            <span className="tool-icon-row">
+              <span className="ai-feature-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   strokeLinecap="round"
-                />
-                <path d="M20 20.5L16.5 17" strokeLinecap="round" />
-              </svg>
+                  strokeLinejoin="round"
+                >
+                  <path d="M11 3.25C15.2802 3.25 18.75 6.71979 18.75 11C18.75 15.2802 15.2802 18.75 11 18.75C6.71979 18.75 3.25 15.2802 3.25 11C3.25 6.71979 6.71979 3.25 11 3.25Z" />
+                  <path
+                    d="M7.5 10.8235L9.64097 12.9645C9.93755 13.2611 10.4177 13.2634 10.7171 12.9697L14.7647 9"
+                    strokeLinecap="round"
+                  />
+                  <path d="M20 20.5L16.5 17" strokeLinecap="round" />
+                </svg>
+              </span>
             </span>
-          </span>
-          <span>
-            <strong>{t('aiCheckBtn')}</strong>
-          </span>
-        </button>
+            <span>
+              <strong>{t('aiCheckBtn')}</strong>
+            </span>
+          </button>
+          <details>
+            <summary aria-label={lang.startsWith('zh') ? '校验模式' : 'Check mode'}>▾</summary>
+            <div className="bc-menu">
+              <button
+                onClick={(e) => {
+                  e.currentTarget.closest('details')?.removeAttribute('open')
+                  onAiRun(t('aiCheckPrompt'))
+                }}
+              >
+                {lang.startsWith('zh') ? '通用校验' : 'General check'}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.currentTarget.closest('details')?.removeAttribute('open')
+                  onBusinessCheck()
+                }}
+              >
+                {lang.startsWith('zh') ? '业务一致性（预览版）' : 'Business consistency (Preview)'}
+              </button>
+            </div>
+          </details>
+        </div>
         <button
           className="ribbon-tool as-button large ai-entry"
           disabled={!sheetHasContent}

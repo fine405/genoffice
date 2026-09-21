@@ -1,3 +1,5 @@
+import { BusinessCheckController, type CheckScope } from './business-check/controller'
+import { BusinessCheckPanel } from './business-check/BusinessCheckPanel'
 import {
   activateFormulaClosure,
   applyDefinedNames,
@@ -1352,6 +1354,38 @@ export function App(): React.JSX.Element {
     return getActiveSheetInfoImpl(readContext(), aiRunScopeRef.current)
   }
 
+  const aiBusyForCheck = useRef(aiBusy)
+  aiBusyForCheck.current = aiBusy
+  const [businessScope, setBusinessScope] = useState<CheckScope | null>(null)
+  const [businessCheck] = useState(
+    () =>
+      new BusinessCheckController({
+        currentWorkbook: () => univerRef.current?.univerAPI.getActiveWorkbook()?.getId(),
+        aiBusy: () => aiBusyForCheck.current,
+        load: async (sheetId, bounds) => sheetsSkillDeps().ensureRangeLoaded!(bounds, sheetId),
+        read: (sheetId, addresses) => readCellsImpl(readContext(), addresses, sheetId),
+        navigate: (sheetId, bounds) =>
+          selectWorkbookRange(readContext(), sheetId, bounds, setMessage),
+        api: window.desktopApi.businessCheck,
+      }),
+  )
+  function openBusinessCheck(): void {
+    const workbook = univerRef.current?.univerAPI.getActiveWorkbook()
+    const sheet = workbook?.getActiveSheet()
+    if (!workbook || !sheet) return
+    const selection = workbook.getActiveRange()?.getRange()
+    const multi =
+      selection &&
+      (selection.startRow !== selection.endRow || selection.startColumn !== selection.endColumn)
+    setBusinessScope({
+      workbookId: workbook.getId(),
+      sheetId: sheet.getSheetId(),
+      sheetName: sheet.getSheetName(),
+      range: multi ? boundsToA1(selection) : '',
+    })
+    setAiSelectionAskAnchor(null)
+  }
+
   function sheetsSkillDeps(): SheetsSkillDeps {
     return {
       getActiveSheetInfo,
@@ -2648,6 +2682,25 @@ export function App(): React.JSX.Element {
     )
     // Style edits (ribbon, dialog, undo/redo, AI apply) all land as these
     // mutations; re-reading the selection keeps the ribbon echo current.
+    const businessCheckDisposable = runtime.univerAPI.addEvent(
+      runtime.univerAPI.Event.CommandExecuted,
+      (event) => {
+        if (journalSuppression.active) return
+        const params = event.params as { subUnitId?: string; cellValue?: unknown } | undefined
+        if (event.id === SET_RANGE_VALUES_MUTATION) {
+          const bounds = cellValueBounds(params?.cellValue)
+          if (bounds) businessCheck.changed(params?.subUnitId, bounds)
+        } else if (
+          ROW_COLUMN_MUTATIONS[event.id] ||
+          event.id === REORDER_RANGE_MUTATION ||
+          event.id === MOVE_RANGE_MUTATION ||
+          event.id === MOVE_ROWS_MUTATION ||
+          SHEET_LIFECYCLE_MUTATIONS.has(event.id)
+        ) {
+          businessCheck.changed(params?.subUnitId, undefined, true)
+        }
+      },
+    )
     const formatEchoDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.CommandExecuted,
       ({ id }) => {
@@ -2738,6 +2791,8 @@ export function App(): React.JSX.Element {
       journalDisposable.dispose()
       structuralDisposable.dispose()
       selectionDisposable.dispose()
+      businessCheckDisposable.dispose()
+      businessCheck.reset()
       formatEchoDisposable.dispose()
       clickDisposable.dispose()
       if (contentTimer) clearTimeout(contentTimer)
@@ -2761,7 +2816,7 @@ export function App(): React.JSX.Element {
       runtime.univer.dispose()
       univerRef.current = null
     }
-  }, [])
+  }, [businessCheck])
 
   // Canvas render state lives outside React; mirror the toggle into it.
   useEffect(() => {
@@ -2774,7 +2829,7 @@ export function App(): React.JSX.Element {
     retryIndex?: number,
   ): void {
     const instruction = (overrideInstruction ?? prompt).trim()
-    if (!instruction || aiBusy) return
+    if (!instruction || aiBusy || businessCheck.snapshot().busy) return
     runToolsRef.current = []
     // The message consumes the composer attachments: they ride along (echoed on the
     // bubble, images multimodal, files via the files skill) and the composer clears.
@@ -2955,6 +3010,22 @@ export function App(): React.JSX.Element {
     }
   }
 
+  function invalidateBusinessPlan(plan: ChangePlan): void {
+    if (plan.structuralChanges.length || plan.sheetRenames.length) {
+      businessCheck.changed(undefined, undefined, true)
+      return
+    }
+    for (const change of plan.cellChanges) {
+      const { row, column } = parseAddress(change.address)
+      businessCheck.changed(change.sheetId, {
+        startRow: row,
+        endRow: row,
+        startColumn: column,
+        endColumn: column,
+      })
+    }
+  }
+
   /**
    * Auto-apply a just-proposed plan without the manual Apply click.
    *
@@ -3003,6 +3074,7 @@ export function App(): React.JSX.Element {
     // cannot rely on the preview state within the same tick).
     try {
       const receipt = adapterRef.current.apply(plan)
+      invalidateBusinessPlan(plan)
       const prunedRevision = pruneEmptyDefaultSheet(plan)
       // Row/column shifts and new sheets can't be patched cell-by-cell into
       // the existing Univer grid — rebuild the demo workbook from the snapshot.
@@ -3136,6 +3208,7 @@ export function App(): React.JSX.Element {
       },
     )
     if (outcome.ok) {
+      invalidateBusinessPlan(stored.plan)
       lazyPreviewRef.current = null
       setPreview(null)
     } else if (outcome !== verified && outcome.reason) {
@@ -3175,6 +3248,9 @@ export function App(): React.JSX.Element {
         runtime.univerAPI.getActiveWorkbook()?.getId() !== workbook.getId()
           ? { ok: false, reason: t('appApplyTxFailed') }
           : null,
+    }).then((outcome) => {
+      if (outcome.ok) invalidateBusinessPlan(plan)
+      return outcome
     })
   }
 
@@ -3222,6 +3298,7 @@ export function App(): React.JSX.Element {
       return
     }
     try {
+      businessCheck.changed(undefined, undefined, true)
       let receipt = adapterRef.current.undo()
       for (let step = 1; step < count; step += 1) receipt = adapterRef.current.undo()
       // Rebuild instead of patching: undo can remove cells and reverse
@@ -3566,6 +3643,8 @@ export function App(): React.JSX.Element {
   }
 
   function openLazyWorkbook(opened: WorkbookFile): void {
+    businessCheck.reset()
+    setBusinessScope(null)
     const selected: WorkbookFile = {
       ...opened,
       visuals: opened.visuals.map((visual) =>
@@ -4111,6 +4190,10 @@ export function App(): React.JSX.Element {
         />
       )}
       <ExcelShell
+        onBusinessCheck={openBusinessCheck}
+        businessCheckPanel={
+          <BusinessCheckPanel controller={businessCheck} scope={businessScope} aiBusy={aiBusy} />
+        }
         prompt={prompt}
         preview={preview}
         sheetHasContent={sheetHasContent}

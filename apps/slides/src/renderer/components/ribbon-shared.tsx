@@ -464,7 +464,7 @@ export interface Props {
   /** Start the show (fromStart=true from the beginning, false from the current page) */
   onSlideShow: (fromStart: boolean) => void
   /** Start presenter view (single-window version: current page + next-page preview + notes + timer) */
-  onPresenterView: (fromStart: boolean) => void
+  onPresenterView: (fromStart: boolean, follow?: boolean) => void
   /** Open the custom show management dialog (create/edit/play page subsets) */
   onCustomShow: () => void
   /** Start rehearsal timing (plays the show recording each page's dwell time; can be saved as auto-advance times afterwards) */

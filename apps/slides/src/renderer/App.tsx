@@ -481,7 +481,7 @@ export function App() {
   //    customOrder = custom show playback sequence; rehearse = rehearsal timing mode) ────────
   const [slideShow, setSlideShow] = useState<SlideShowState | null>(null)
   /** Presenter view (single-window version; mutually exclusive with slideShow) */
-  const [presenter, setPresenter] = useState<{ startAt: number } | null>(null)
+  const [presenter, setPresenter] = useState<{ startAt: number; follow?: boolean } | null>(null)
   // ── Custom shows: document-level list (persisted to localStorage by file path) + management dialog ──
   const [customShows, setCustomShows] = useState<CustomShow[]>([])
   const [customShowDlgOpen, setCustomShowDlgOpen] = useState(false)
@@ -1733,7 +1733,8 @@ export function App() {
   )
   const saveRehearseTimings = useCallback(() => showActions.saveRehearseTimings(ctxRef.current), [])
   const startPresenterView = useCallback(
-    (fromStart: boolean) => showActions.startPresenterView(ctxRef.current, fromStart),
+    (fromStart: boolean, follow?: boolean) =>
+      showActions.startPresenterView(ctxRef.current, fromStart, follow),
     [],
   )
   const exitPresenterView = useCallback(
@@ -4027,6 +4028,7 @@ export function App() {
 
       {presenter && slides.length > 0 && (
         <PresenterView
+          initialFollow={presenter.follow}
           slides={slides}
           images={images}
           startAt={presenter.startAt}

@@ -23,7 +23,7 @@ const en = {
   } as Record<string, string>,
 }
 const zh: typeof en = {
-  title: '去除背景（Preview）',
+  title: '去除背景（预览版）',
   hint: '保留主体、移除背景，确认透明效果后再应用到图片。',
   original: '原图',
   result: '处理结果',
@@ -47,3 +47,6 @@ const zh: typeof en = {
   },
 }
 export const imageLabStrings = (lang: string): typeof en => (lang.startsWith('zh') ? zh : en)
+
+export const previewSuffix = (lang: string): string =>
+  lang.startsWith('zh') ? '（预览版）' : '（Preview）'

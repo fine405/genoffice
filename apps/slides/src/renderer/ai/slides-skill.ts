@@ -1,3 +1,5 @@
+import { previewSuffix } from '../image-lab-strings'
+import { getLang } from '../i18n/locale'
 import type { AgentSkill, ToolDisplay } from '@genoffice/agent-core'
 import type {
   GroupRenderNode,
@@ -1571,7 +1573,7 @@ async function executeTool(
         return {
           output: `Removed background of picture ${sourceId} on page ${idx + 1}. The transparent image was applied in place; undo is available.`,
           mutated: true,
-          summary: t('aiChipRemoveBg') + '（Preview）',
+          summary: t('aiChipRemoveBg') + previewSuffix(getLang()),
         }
       } finally {
         signal?.removeEventListener('abort', cancel)

@@ -21,6 +21,7 @@ import { useI18n } from '../i18n/locale'
 import { SlideThumb } from '../SlideThumb'
 import { InkLayer, type InkStroke } from './ShowInk'
 import { liftShowCurtain } from '../show-actions'
+import { VoiceFollowPanel } from '../voice-follow/VoiceFollowPanel'
 
 /** Layout constants (aligned with styles.css) */
 const IS_MAC = navigator.platform.toLowerCase().includes('mac')
@@ -50,7 +51,9 @@ export function PresenterView({
   startAt,
   onExit,
   onUseSlideShow,
+  initialFollow = false,
 }: {
+  initialFollow?: boolean
   slides: RenderSlide[]
   images: Map<string, HTMLImageElement>
   /** Start page (original index) */
@@ -61,6 +64,11 @@ export function PresenterView({
   onUseSlideShow?: (lastIndex: number) => void
 }) {
   const { t } = useI18n()
+  const [followOpen, setFollowOpen] = useState(initialFollow)
+  const followPause = useRef<(() => void) | null>(null)
+  const registerFollowPause = useCallback((pause: (() => void) | null) => {
+    followPause.current = pause
+  }, [])
   // Playback sequence (original indexes): hidden pages skipped; the start page kept even if hidden (consistent with SlideShowView)
   const order = useMemo(() => {
     const o = slides.map((_, i) => i).filter((i) => !slides[i]!.hidden || i === startAt)
@@ -123,9 +131,9 @@ export function PresenterView({
   // loadedRef ticks with player.epoch; the broadcast effect uses it to read the "in place" page number
   const loadedRef = useRef<{ idx: number; fresh: boolean }>({ idx: order[pos]!, fresh: true })
   useEffect(() => {
-    loadedRef.current = { idx: order[pos]!, fresh: navModeRef.current === 'fresh' }
-    player.load(allAnims?.[order[pos]!] ?? [], navModeRef.current)
-  }, [allAnims, pos, order, player.load]) // eslint-disable-line react-hooks/exhaustive-deps
+    loadedRef.current = { idx: order[pos]!, fresh: !followOpen && navModeRef.current === 'fresh' }
+    player.load(allAnims?.[order[pos]!] ?? [], followOpen ? 'all' : navModeRef.current)
+  }, [allAnims, pos, order, player.load, followOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Multi-screen: open the audience window on entry, close on exit ─────────────
   useEffect(() => {
@@ -216,12 +224,14 @@ export function PresenterView({
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const goTo = useCallback((nextPos: number, fresh: boolean) => {
+  const goTo = useCallback((nextPos: number, fresh: boolean, automatic = false) => {
+    if (!automatic) followPause.current?.()
     navModeRef.current = fresh ? 'fresh' : 'all'
     setPos(nextPos)
   }, [])
 
   const next = useCallback(() => {
+    followPause.current?.()
     if (ended) {
       exitRef.current()
       return
@@ -233,6 +243,7 @@ export function PresenterView({
   }, [ended, pos, order.length, goTo, player.advance]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const prev = useCallback(() => {
+    followPause.current?.()
     if (ended) {
       setEnded(false)
       return
@@ -258,6 +269,14 @@ export function PresenterView({
   // Keyboard navigation (capture beats the editor's generic shortcuts; keys match SlideShowView + B blackout)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (
+        e.isComposing ||
+        (e.target instanceof Element &&
+          e.target.closest(
+            '[data-voice-follow], input, textarea, select, [contenteditable="true"]',
+          ))
+      )
+        return
       if (e.key === 'Escape') {
         e.preventDefault()
         exitRef.current()
@@ -403,6 +422,13 @@ export function PresenterView({
             ▤ {t('panePresenterUseShow')}
           </button>
         )}
+        <button
+          className="pv-top-btn"
+          aria-pressed={followOpen}
+          onClick={() => setFollowOpen((v) => !v)}
+        >
+          语音跟随 / 文字模拟（预览版）
+        </button>
         <div className="pv-top-spacer" />
         {!hasAudience && <span className="pv-top-hint">{t('panePresenterSingleHint')}</span>}
       </div>
@@ -527,34 +553,56 @@ export function PresenterView({
           </div>
         </div>
         <div className="pv-side">
-          <div className="pv-section-label">{t('panePresenterNextSlide')}</div>
-          <div className="pv-next">
-            {nextSlide ? (
-              <SlideThumb slide={nextSlide} images={images} width={SIDE_W - 28} />
-            ) : (
-              <div className="pv-next-none">{ended ? '—' : t('panePresenterLastSlide')}</div>
-            )}
-          </div>
-          <div className="pv-section-label">{t('panePresenterNotes')}</div>
-          <div className="pv-notes" style={{ fontSize: noteSize }}>
-            {notes.trim() ? notes : t('panePresenterNoNotes')}
-          </div>
-          <div className="pv-notes-size">
-            <button
-              className="pv-mini-btn"
-              onClick={() => setNoteSize((s) => Math.min(28, s + 2))}
-              data-tip={t('panePresenterNotesBigger')}
-            >
-              A⁺
-            </button>
-            <button
-              className="pv-mini-btn"
-              onClick={() => setNoteSize((s) => Math.max(11, s - 2))}
-              data-tip={t('panePresenterNotesSmaller')}
-            >
-              A⁻
-            </button>
-          </div>
+          {followOpen ? (
+            <VoiceFollowPanel
+              slides={slides}
+              notes={allNotes}
+              order={order}
+              current={order[pos]!}
+              startAt={startAt}
+              blocked={black || ended}
+              registerPause={registerFollowPause}
+              onNavigate={(index) => {
+                const target = order.indexOf(index)
+                if (target >= 0) {
+                  setEnded(false)
+                  goTo(target, false, true)
+                }
+              }}
+              onExit={() => exitRef.current()}
+            />
+          ) : (
+            <>
+              <div className="pv-section-label">{t('panePresenterNextSlide')}</div>
+              <div className="pv-next">
+                {nextSlide ? (
+                  <SlideThumb slide={nextSlide} images={images} width={SIDE_W - 28} />
+                ) : (
+                  <div className="pv-next-none">{ended ? '—' : t('panePresenterLastSlide')}</div>
+                )}
+              </div>
+              <div className="pv-section-label">{t('panePresenterNotes')}</div>
+              <div className="pv-notes" style={{ fontSize: noteSize }}>
+                {notes.trim() ? notes : t('panePresenterNoNotes')}
+              </div>
+              <div className="pv-notes-size">
+                <button
+                  className="pv-mini-btn"
+                  onClick={() => setNoteSize((s) => Math.min(28, s + 2))}
+                  data-tip={t('panePresenterNotesBigger')}
+                >
+                  A⁺
+                </button>
+                <button
+                  className="pv-mini-btn"
+                  onClick={() => setNoteSize((s) => Math.max(11, s - 2))}
+                  data-tip={t('panePresenterNotesSmaller')}
+                >
+                  A⁻
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
       <div className="pv-film" ref={filmRef}>

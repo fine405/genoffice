@@ -1,3 +1,4 @@
+import { previewSuffix } from './image-lab-strings'
 import { fontPickerStrings } from '@genoffice/font-picker/strings'
 /**
  * Context-menu item builder extracted from App.tsx. Builds the
@@ -356,7 +357,7 @@ export function buildCtxItems(ctx: ActionCtx): Array<CtxItem | null> {
                   onClick: () => ctx.openFontPicker(ctxMenu.targetId),
                 } as CtxItem,
                 {
-                  label: t('appCtxRemoveBackground') + '（Preview）',
+                  label: t('appCtxRemoveBackground') + previewSuffix(getLang()),
                   onClick: () => pictureEditActions.startCutout(ctx),
                 } as CtxItem,
               ]

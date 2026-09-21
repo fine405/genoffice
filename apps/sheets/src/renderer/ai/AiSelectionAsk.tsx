@@ -9,6 +9,7 @@ import {
 interface Props {
   anchor: SelectionAskAnchor
   range: string
+  onBusinessCheck?: () => void
   onSend: (instruction: string) => void
   onDismiss: () => void
 }
@@ -20,8 +21,14 @@ const EST_HEIGHT = 166
 const MAX_INSTRUCTION = 2000
 
 /** Grid-selection Ask AI trigger and its send-now popover. */
-export function AiSelectionAsk({ anchor, range, onSend, onDismiss }: Props): React.JSX.Element {
-  const { t } = useI18n()
+export function AiSelectionAsk({
+  anchor,
+  range,
+  onSend,
+  onDismiss,
+  onBusinessCheck,
+}: Props): React.JSX.Element {
+  const { t, lang } = useI18n()
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [triggerPlacement, setTriggerPlacement] = useState<{
@@ -153,6 +160,11 @@ export function AiSelectionAsk({ anchor, range, onSend, onDismiss }: Props): Rea
         >
           {t('aiCheckBtn')}
         </button>
+        {onBusinessCheck && (
+          <button type="button" onClick={onBusinessCheck}>
+            {lang.startsWith('zh') ? '业务一致性（预览版）' : 'Business consistency (Preview)'}
+          </button>
+        )}
       </div>
       <div className="ai-ask-pop-foot">
         <button className="ai-ask-cancel" onClick={onDismiss}>

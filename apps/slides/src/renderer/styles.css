@@ -8903,3 +8903,106 @@ body.show-curtain::after {
   flex: 1;
   min-width: 0;
 }
+
+/* Voice follow lives only on the presenter screen. */
+.vf-panel {
+  overflow-y: auto;
+  min-height: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 2px 2px 12px;
+}
+.vf-heading,
+.vf-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.vf-heading {
+  justify-content: space-between;
+  font-size: 15px;
+}
+.vf-panel label {
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+.vf-panel select,
+.vf-panel textarea,
+.vf-panel input:not([type='checkbox']) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 4px 0 8px;
+  border: 1px solid var(--slides-show-line-18);
+  border-radius: 5px;
+  background: var(--slides-show-black);
+  color: var(--slides-pv-ink);
+  padding: 7px;
+  font: inherit;
+}
+.vf-panel textarea {
+  resize: vertical;
+  min-height: 76px;
+}
+.vf-panel button {
+  border: 1px solid var(--slides-show-line-18);
+  border-radius: 5px;
+  padding: 6px 9px;
+  background: var(--slides-show-fill-14);
+  color: var(--slides-pv-ink);
+  cursor: pointer;
+  font: inherit;
+  flex-shrink: 0;
+}
+.vf-panel button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.vf-panel .vf-primary {
+  font-weight: 600;
+  border-color: var(--slides-show-ink-55);
+}
+.vf-panel .vf-check {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.vf-panel summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-weight: 600;
+}
+.vf-panel p {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+.vf-panel article {
+  border-top: 1px solid var(--slides-show-line-18);
+  padding: 10px 0;
+}
+.vf-panel .vf-cards {
+  margin-bottom: 10px;
+}
+.vf-panel .vf-transcript {
+  white-space: pre-wrap;
+}
+.vf-panel :focus-visible {
+  outline: 2px solid var(--slides-show-ink-85);
+  outline-offset: 2px;
+}
+
+.vf-panel select {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.vf-panel select:focus {
+  outline: none;
+  box-shadow: none;
+}
+.vf-panel select:focus-visible {
+  border-bottom-color: var(--slides-show-line-18);
+}

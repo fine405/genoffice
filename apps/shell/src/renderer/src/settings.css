@@ -469,3 +469,11 @@
   font-weight: 600;
   color: var(--text);
 }
+
+/* Keep settings rows at their natural height when service options extend the pane. */
+.set-pane:has(.set-ai-services) > * {
+  flex-shrink: 0;
+}
+.set-ai-services .set-field-desc {
+  overflow-wrap: anywhere;
+}

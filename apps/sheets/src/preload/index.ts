@@ -55,6 +55,11 @@ import {
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 
 const desktopApi: DesktopApi = {
+  businessCheck: {
+    settings: () => ipcRenderer.invoke('sheets:business-settings'),
+    judge: (request) => ipcRenderer.invoke('sheets:business-judge', request),
+    cancel: (id) => ipcRenderer.invoke('sheets:business-cancel', id),
+  },
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
   onLanguageChanged(handler) {
     const listener = (

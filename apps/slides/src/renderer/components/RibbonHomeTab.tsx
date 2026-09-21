@@ -1,3 +1,4 @@
+import { previewSuffix } from '../image-lab-strings'
 import { fontPickerStrings } from '@genoffice/font-picker/strings'
 import { getLang } from '../i18n/locale'
 /** Home tab of the slides ribbon. Extracted from Ribbon.tsx. */
@@ -577,9 +578,12 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
                 >
                   <div className="rb-menu-scroll">
                     {customFonts.some((font) => matchesFontFilter(font.family)) && (
-                      <div role="group" aria-label={t('ribbonFontsCustom') + '（Preview）'}>
+                      <div
+                        role="group"
+                        aria-label={t('ribbonFontsCustom') + previewSuffix(getLang())}
+                      >
                         <div className="rb-menu-group-label">
-                          {t('ribbonFontsCustom') + '（Preview）'}
+                          {t('ribbonFontsCustom') + previewSuffix(getLang())}
                         </div>
                         {customFonts
                           .filter((font) => matchesFontFilter(font.family))

@@ -1,3 +1,4 @@
+import type { FollowApi } from './voice-follow'
 import type { ImageLabRequest, ImageLabResult, ImageLabProgress } from './image-lab'
 import type { FontProgress, PickerRequest, PickerResult } from '@genoffice/font-picker/types'
 import type { AiPanelPrefs } from '@genoffice/ui'
@@ -1169,6 +1170,7 @@ export type MenuCommand =
   | 'paste'
 
 export interface SlidesApi {
+  voiceFollow: FollowApi
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage: () => Promise<
     'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'

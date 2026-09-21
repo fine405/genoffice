@@ -210,6 +210,8 @@ export interface AiChatMessage {
 
 export function AiChatPanel({
   isOpen,
+  tabs,
+  alternateContent,
   hasContent,
   chat,
   historicChat = [],
@@ -235,6 +237,8 @@ export function AiChatPanel({
   onExpand,
   onCollapse,
 }: {
+  readonly tabs?: React.ReactNode
+  readonly alternateContent?: React.ReactNode
   readonly isOpen: boolean
   /** the workbook has cells with content — empty workbooks get "build me a sheet" copy instead */
   readonly hasContent: boolean
@@ -538,296 +542,306 @@ export function AiChatPanel({
         </div>
       </header>
 
-      <div className="ai-chat" ref={chatRef} onScroll={onChatScroll}>
-        {/* Past conversation (read-only transcript), shown continuously with the current turn */}
-        {historicChat.length > 0 && (
-          <>
-            {historicChat.map((entry, i) => (
-              <div key={`h${i}`} className={`ai-msg ai-msg-${entry.role} ai-msg-historic`}>
-                {entry.role === 'user' && entry.scope && <AiScopeQuote scope={entry.scope} />}
-                {entry.role === 'user' && entry.attachments && entry.attachments.length > 0 && (
-                  <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
-                )}
-                {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
-                {entry.text && (
-                  <div dir="auto">
-                    <Markdown text={entry.text} nav={citationNav} />
-                  </div>
-                )}
-              </div>
-            ))}
-            <div className="ai-history-sep">{t('aiHistorySep')}</div>
-          </>
-        )}
-        {chat.length === 0 && historicChat.length === 0 && (
-          <div className="ai-chat-empty">
-            <div className="ai-chat-empty-title">
-              {t(hasContent ? 'aiEmptyTitle' : 'aiEmptyBuildTitle')}
-            </div>
-            <div className="ai-chat-empty-body">
-              {t(hasContent ? 'aiEmptyBodyLine1' : 'aiEmptyBuildBody')}
-            </div>
-          </div>
-        )}
-        {chat.map((entry, index) => (
-          <div
-            key={index}
-            className={`ai-msg ai-msg-${entry.role}${entry.isError ? ' ai-msg-error' : ''}${entry.role === 'assistant' && entry.streaming ? ' ai-msg-streaming' : ''}`}
-          >
-            {entry.role === 'user' ? (
+      {tabs}
+      {alternateContent ?? (
+        <>
+          <div className="ai-chat" ref={chatRef} onScroll={onChatScroll}>
+            {/* Past conversation (read-only transcript), shown continuously with the current turn */}
+            {historicChat.length > 0 && (
               <>
-                {entry.scope && <AiScopeQuote scope={entry.scope} />}
-                {entry.attachments && entry.attachments.length > 0 && (
-                  <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
-                )}
-                <span dir="auto">{entry.text}</span>
-                {entry.undelivered && (
-                  <div className="ai-msg-undelivered">
-                    {t('aiUndelivered')}
-                    {!aiBusy && (
-                      <button
-                        className="ai-retry-btn"
-                        onClick={() => onSend(entry.text, entry.attachments ?? [], index)}
-                      >
-                        {t('aiRetry')}
-                      </button>
+                {historicChat.map((entry, i) => (
+                  <div key={`h${i}`} className={`ai-msg ai-msg-${entry.role} ai-msg-historic`}>
+                    {entry.role === 'user' && entry.scope && <AiScopeQuote scope={entry.scope} />}
+                    {entry.role === 'user' && entry.attachments && entry.attachments.length > 0 && (
+                      <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
+                    )}
+                    {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+                    {entry.text && (
+                      <div dir="auto">
+                        <Markdown text={entry.text} nav={citationNav} />
+                      </div>
                     )}
                   </div>
-                )}
+                ))}
+                <div className="ai-history-sep">{t('aiHistorySep')}</div>
               </>
-            ) : (
-              <>
-                {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
-                {entry.text ? (
-                  <div dir="auto">
-                    <Markdown text={entry.text} nav={citationNav} />
-                  </div>
+            )}
+            {chat.length === 0 && historicChat.length === 0 && (
+              <div className="ai-chat-empty">
+                <div className="ai-chat-empty-title">
+                  {t(hasContent ? 'aiEmptyTitle' : 'aiEmptyBuildTitle')}
+                </div>
+                <div className="ai-chat-empty-body">
+                  {t(hasContent ? 'aiEmptyBodyLine1' : 'aiEmptyBuildBody')}
+                </div>
+              </div>
+            )}
+            {chat.map((entry, index) => (
+              <div
+                key={index}
+                className={`ai-msg ai-msg-${entry.role}${entry.isError ? ' ai-msg-error' : ''}${entry.role === 'assistant' && entry.streaming ? ' ai-msg-streaming' : ''}`}
+              >
+                {entry.role === 'user' ? (
+                  <>
+                    {entry.scope && <AiScopeQuote scope={entry.scope} />}
+                    {entry.attachments && entry.attachments.length > 0 && (
+                      <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
+                    )}
+                    <span dir="auto">{entry.text}</span>
+                    {entry.undelivered && (
+                      <div className="ai-msg-undelivered">
+                        {t('aiUndelivered')}
+                        {!aiBusy && (
+                          <button
+                            className="ai-retry-btn"
+                            onClick={() => onSend(entry.text, entry.attachments ?? [], index)}
+                          >
+                            {t('aiRetry')}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  entry.streaming && (
-                    <span className="ai-typing-row">
-                      <AiTypingIndicator
-                        label={entry.tools.length > 0 ? t('aiWorking') : t('aiThinking')}
-                      />
-                    </span>
-                  )
-                )}
-                {entry.autoApplied && (
-                  <div className="ai-auto-applied">
-                    <span className="ai-auto-applied-text">
-                      {t('aiAutoApplied', { count: entry.autoApplied.opCount })}
-                    </span>
-                    {/* undoSteps 0 = the batch exceeded the undo budget and
+                  <>
+                    {entry.tools.length > 0 && <ToolChipList tools={entry.tools} />}
+                    {entry.text ? (
+                      <div dir="auto">
+                        <Markdown text={entry.text} nav={citationNav} />
+                      </div>
+                    ) : (
+                      entry.streaming && (
+                        <span className="ai-typing-row">
+                          <AiTypingIndicator
+                            label={entry.tools.length > 0 ? t('aiWorking') : t('aiThinking')}
+                          />
+                        </span>
+                      )
+                    )}
+                    {entry.autoApplied && (
+                      <div className="ai-auto-applied">
+                        <span className="ai-auto-applied-text">
+                          {t('aiAutoApplied', { count: entry.autoApplied.opCount })}
+                        </span>
+                        {/* undoSteps 0 = the batch exceeded the undo budget and
                         kept no stack entry; a forced 1-step undo would revert
                         the user's own previous action instead. */}
-                    {(entry.autoApplied.undoSteps ?? 1) > 0 && (
+                        {(entry.autoApplied.undoSteps ?? 1) > 0 && (
+                          <button
+                            className="ai-undo-btn"
+                            onClick={() => onUndo(Math.max(1, entry.autoApplied?.undoSteps ?? 1))}
+                            data-tip={t('aiUndoTitle')}
+                          >
+                            {t('aiUndo')}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {entry.loginRequired && (
                       <button
-                        className="ai-undo-btn"
-                        onClick={() => onUndo(Math.max(1, entry.autoApplied?.undoSteps ?? 1))}
-                        data-tip={t('aiUndoTitle')}
+                        className="ai-login-btn"
+                        onClick={() => void window.desktopApi.aiGskLogin()}
                       >
-                        {t('aiUndo')}
+                        {t('aiGskLoginBtn')}
                       </button>
                     )}
+                  </>
+                )}
+              </div>
+            ))}
+
+            {preview && (
+              <section className="preview ai-preview-card" aria-label={t('aiPreviewAria')}>
+                <h3>{t('aiProposedChanges')}</h3>
+                {preview.structuralChanges.map((change, index) => (
+                  <div className="change" key={`structural-${index}`}>
+                    <strong>{t('aiChangeStructure')}</strong>
+                    <span>{change.label}</span>
+                  </div>
+                ))}
+                {preview.formatChanges.map((change, index) => (
+                  <div className="change" key={`format-${index}`}>
+                    <strong>{t('aiChangeFormat')}</strong>
+                    <span>{change.label}</span>
+                  </div>
+                ))}
+                {preview.cellChanges.slice(0, MAX_PREVIEW_CELL_ROWS).map((change) => (
+                  <div className="change" key={`${change.sheetId}-${change.address}`}>
+                    <strong>{change.address}</strong>
+                    <span>
+                      {formatCell(change.before, t)} → {formatCell(change.after, t)}
+                    </span>
+                  </div>
+                ))}
+                {preview.cellChanges.length > MAX_PREVIEW_CELL_ROWS && (
+                  <div className="change">
+                    <strong>…</strong>
+                    <span>
+                      {t('aiMoreCells', {
+                        count: preview.cellChanges.length - MAX_PREVIEW_CELL_ROWS,
+                      })}
+                    </span>
                   </div>
                 )}
-                {entry.loginRequired && (
-                  <button
-                    className="ai-login-btn"
-                    onClick={() => void window.desktopApi.aiGskLogin()}
-                  >
-                    {t('aiGskLoginBtn')}
-                  </button>
-                )}
-              </>
+                {preview.sheetRenames.map((rename) => (
+                  <div className="change" key={rename.sheetId}>
+                    <strong>{t('aiChangeSheet')}</strong>
+                    <span>
+                      {rename.before} → {rename.after}
+                    </span>
+                  </div>
+                ))}
+                {preview.warnings.map((warning) => (
+                  <div className="change" key={warning}>
+                    <strong>⚠</strong>
+                    <span>{warning}</span>
+                  </div>
+                ))}
+              </section>
             )}
           </div>
-        ))}
 
-        {preview && (
-          <section className="preview ai-preview-card" aria-label={t('aiPreviewAria')}>
-            <h3>{t('aiProposedChanges')}</h3>
-            {preview.structuralChanges.map((change, index) => (
-              <div className="change" key={`structural-${index}`}>
-                <strong>{t('aiChangeStructure')}</strong>
-                <span>{change.label}</span>
-              </div>
-            ))}
-            {preview.formatChanges.map((change, index) => (
-              <div className="change" key={`format-${index}`}>
-                <strong>{t('aiChangeFormat')}</strong>
-                <span>{change.label}</span>
-              </div>
-            ))}
-            {preview.cellChanges.slice(0, MAX_PREVIEW_CELL_ROWS).map((change) => (
-              <div className="change" key={`${change.sheetId}-${change.address}`}>
-                <strong>{change.address}</strong>
-                <span>
-                  {formatCell(change.before, t)} → {formatCell(change.after, t)}
-                </span>
-              </div>
-            ))}
-            {preview.cellChanges.length > MAX_PREVIEW_CELL_ROWS && (
-              <div className="change">
-                <strong>…</strong>
-                <span>
-                  {t('aiMoreCells', { count: preview.cellChanges.length - MAX_PREVIEW_CELL_ROWS })}
-                </span>
-              </div>
-            )}
-            {preview.sheetRenames.map((rename) => (
-              <div className="change" key={rename.sheetId}>
-                <strong>{t('aiChangeSheet')}</strong>
-                <span>
-                  {rename.before} → {rename.after}
-                </span>
-              </div>
-            ))}
-            {preview.warnings.map((warning) => (
-              <div className="change" key={warning}>
-                <strong>⚠</strong>
-                <span>{warning}</span>
-              </div>
-            ))}
-          </section>
-        )}
-      </div>
-
-      <div className="ai-composer">
-        {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
-        <AiComposer
-          header={
-            <>
-              {/* Only a deliberate multi-cell selection shows here: it tells the
+          <div className="ai-composer">
+            {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
+            <AiComposer
+              header={
+                <>
+                  {/* Only a deliberate multi-cell selection shows here: it tells the
                   user what "this column / these rows" will resolve to, and the
                   send freezes it so mid-run clicking cannot retarget the run.
                   While that frozen scope is what shows, dropping it could not
                   change the run any more, so the × goes away with it. */}
-              {scopeRange !== null && (
-                <div className="ai-scope-row">
-                  <span
-                    className={`ai-scope-hint${scopeLocked ? ' is-locked' : ''}`}
-                    data-tip={t('aiScopeRangeTip')}
-                  >
-                    {scopeLabel(scopeRange, scopeColumns, t)}
-                    {!scopeLocked && (
-                      <button
-                        className="ai-scope-clear"
-                        onClick={onScopeDismiss}
-                        data-tip={t('aiScopeClearTitle')}
-                        aria-label={t('aiScopeClearTitle')}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 32 32" aria-hidden>
-                          <path
-                            d="M24 9.4L22.6 8L16 14.6L9.4 8L8 9.4l6.6 6.6L8 22.6L9.4 24l6.6-6.6l6.6 6.6l1.4-1.4l-6.6-6.6L24 9.4z"
-                            fill="currentColor"
-                          />
-                        </svg>
-                      </button>
-                    )}
-                  </span>
-                </div>
-              )}
-              {attachments.length > 0 && (
-                <div className="ai-attachments" onScroll={onAttachmentsScroll}>
-                  {attachments.map((attachment) =>
-                    ATTACHMENT_IMAGE_EXTS.has(attachment.ext) ? (
+                  {scopeRange !== null && (
+                    <div className="ai-scope-row">
                       <span
-                        key={attachment.path}
-                        className="ai-attachment-thumb"
-                        data-tip={attachment.path}
+                        className={`ai-scope-hint${scopeLocked ? ' is-locked' : ''}`}
+                        data-tip={t('aiScopeRangeTip')}
                       >
-                        {attachmentPreviews[attachment.path] ? (
-                          <img src={attachmentPreviews[attachment.path]} alt={attachment.name} />
-                        ) : (
-                          <span className="ai-attachment-thumb-pending" aria-hidden>
-                            <img src={fileImageIcon} alt="" />
-                          </span>
+                        {scopeLabel(scopeRange, scopeColumns, t)}
+                        {!scopeLocked && (
+                          <button
+                            className="ai-scope-clear"
+                            onClick={onScopeDismiss}
+                            data-tip={t('aiScopeClearTitle')}
+                            aria-label={t('aiScopeClearTitle')}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 32 32" aria-hidden>
+                              <path
+                                d="M24 9.4L22.6 8L16 14.6L9.4 8L8 9.4l6.6 6.6L8 22.6L9.4 24l6.6-6.6l6.6 6.6l1.4-1.4l-6.6-6.6L24 9.4z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          </button>
                         )}
-                        <button
-                          className="ai-attachment-thumb-remove"
-                          onClick={() => onRemoveAttachment(attachment.path)}
-                          data-tip={t('aiRemoveAttachment')}
-                          aria-label={t('aiRemoveAttachment')}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden>
-                            <path
-                              d="M24 9.4L22.6 8L16 14.6L9.4 8L8 9.4l6.6 6.6L8 22.6L9.4 24l6.6-6.6l6.6 6.6l1.4-1.4l-6.6-6.6L24 9.4z"
-                              fill="currentColor"
-                              stroke="currentColor"
-                              strokeWidth="0.25"
-                            />
-                          </svg>
-                        </button>
                       </span>
-                    ) : (
-                      <span
-                        key={attachment.path}
-                        className="ai-attachment-card"
-                        data-tip={attachment.path}
-                      >
-                        <span className="ai-attachment-card-icon">
-                          <AttachmentCardIcon ext={attachment.ext} />
-                        </span>
-                        <span className="ai-attachment-card-meta">
-                          <span className="ai-attachment-card-name">
-                            {truncateCardName(attachment.name)}
-                          </span>
-                          <span className="ai-attachment-card-size">
-                            {formatAttachmentSize(attachment.sizeBytes)}
-                          </span>
-                        </span>
-                        <button
-                          className="ai-attachment-thumb-remove"
-                          onClick={() => onRemoveAttachment(attachment.path)}
-                          data-tip={t('aiRemoveAttachment')}
-                          aria-label={t('aiRemoveAttachment')}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden>
-                            <path
-                              d="M24 9.4L22.6 8L16 14.6L9.4 8L8 9.4l6.6 6.6L8 22.6L9.4 24l6.6-6.6l6.6 6.6l1.4-1.4l-6.6-6.6L24 9.4z"
-                              fill="currentColor"
-                              stroke="currentColor"
-                              strokeWidth="0.25"
-                            />
-                          </svg>
-                        </button>
-                      </span>
-                    ),
+                    </div>
                   )}
-                </div>
-              )}
-            </>
-          }
-          value={prompt}
-          busy={aiBusy}
-          placeholder={t(hasContent ? 'aiComposerPlaceholder' : 'aiComposerPlaceholderBuild')}
-          hintIdle={t('aiHintIdle')}
-          hintBusy={t('aiHintBusy')}
-          hintIdleTitle={t('aiHintIdleTitle')}
-          sendLabel={t('aiSend')}
-          stopLabel={t('aiStop')}
-          ariaLabel={t('aiInstructionAria')}
-          iconOnly
-          sendIconEnabled={<img src={sendEnterOn} alt="" aria-hidden />}
-          sendIconDisabled={<img src={sendEnterOff} alt="" aria-hidden />}
-          stopIcon={<img src={sendStop} alt="" aria-hidden />}
-          footerStart={
-            <button
-              className="ai-attach-btn"
-              onClick={onPickAttachments}
-              data-tip={t('aiAttachTitle')}
-              aria-label={t('aiAttachTitle')}
-            >
-              <img src={attachIcon} alt="" aria-hidden />
-            </button>
-          }
-          textareaRef={inputRef}
-          onChange={onPromptChange}
-          onSend={send}
-          onStop={onStop}
-          onPasteFiles={onPasteFiles}
-        />
-      </div>
+                  {attachments.length > 0 && (
+                    <div className="ai-attachments" onScroll={onAttachmentsScroll}>
+                      {attachments.map((attachment) =>
+                        ATTACHMENT_IMAGE_EXTS.has(attachment.ext) ? (
+                          <span
+                            key={attachment.path}
+                            className="ai-attachment-thumb"
+                            data-tip={attachment.path}
+                          >
+                            {attachmentPreviews[attachment.path] ? (
+                              <img
+                                src={attachmentPreviews[attachment.path]}
+                                alt={attachment.name}
+                              />
+                            ) : (
+                              <span className="ai-attachment-thumb-pending" aria-hidden>
+                                <img src={fileImageIcon} alt="" />
+                              </span>
+                            )}
+                            <button
+                              className="ai-attachment-thumb-remove"
+                              onClick={() => onRemoveAttachment(attachment.path)}
+                              data-tip={t('aiRemoveAttachment')}
+                              aria-label={t('aiRemoveAttachment')}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden>
+                                <path
+                                  d="M24 9.4L22.6 8L16 14.6L9.4 8L8 9.4l6.6 6.6L8 22.6L9.4 24l6.6-6.6l6.6 6.6l1.4-1.4l-6.6-6.6L24 9.4z"
+                                  fill="currentColor"
+                                  stroke="currentColor"
+                                  strokeWidth="0.25"
+                                />
+                              </svg>
+                            </button>
+                          </span>
+                        ) : (
+                          <span
+                            key={attachment.path}
+                            className="ai-attachment-card"
+                            data-tip={attachment.path}
+                          >
+                            <span className="ai-attachment-card-icon">
+                              <AttachmentCardIcon ext={attachment.ext} />
+                            </span>
+                            <span className="ai-attachment-card-meta">
+                              <span className="ai-attachment-card-name">
+                                {truncateCardName(attachment.name)}
+                              </span>
+                              <span className="ai-attachment-card-size">
+                                {formatAttachmentSize(attachment.sizeBytes)}
+                              </span>
+                            </span>
+                            <button
+                              className="ai-attachment-thumb-remove"
+                              onClick={() => onRemoveAttachment(attachment.path)}
+                              data-tip={t('aiRemoveAttachment')}
+                              aria-label={t('aiRemoveAttachment')}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden>
+                                <path
+                                  d="M24 9.4L22.6 8L16 14.6L9.4 8L8 9.4l6.6 6.6L8 22.6L9.4 24l6.6-6.6l6.6 6.6l1.4-1.4l-6.6-6.6L24 9.4z"
+                                  fill="currentColor"
+                                  stroke="currentColor"
+                                  strokeWidth="0.25"
+                                />
+                              </svg>
+                            </button>
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </>
+              }
+              value={prompt}
+              busy={aiBusy}
+              placeholder={t(hasContent ? 'aiComposerPlaceholder' : 'aiComposerPlaceholderBuild')}
+              hintIdle={t('aiHintIdle')}
+              hintBusy={t('aiHintBusy')}
+              hintIdleTitle={t('aiHintIdleTitle')}
+              sendLabel={t('aiSend')}
+              stopLabel={t('aiStop')}
+              ariaLabel={t('aiInstructionAria')}
+              iconOnly
+              sendIconEnabled={<img src={sendEnterOn} alt="" aria-hidden />}
+              sendIconDisabled={<img src={sendEnterOff} alt="" aria-hidden />}
+              stopIcon={<img src={sendStop} alt="" aria-hidden />}
+              footerStart={
+                <button
+                  className="ai-attach-btn"
+                  onClick={onPickAttachments}
+                  data-tip={t('aiAttachTitle')}
+                  aria-label={t('aiAttachTitle')}
+                >
+                  <img src={attachIcon} alt="" aria-hidden />
+                </button>
+              }
+              textareaRef={inputRef}
+              onChange={onPromptChange}
+              onSend={send}
+              onStop={onStop}
+              onPasteFiles={onPasteFiles}
+            />
+          </div>
+        </>
+      )}
     </aside>
   )
 }

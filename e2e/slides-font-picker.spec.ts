@@ -445,7 +445,7 @@ test('Font Lab live recognition, preview and document font application', async (
     const scale = stage.width / 1280
     await page.mouse.click(stage.x + 130 * scale, stage.y + 130 * scale)
     await page.locator('.rb-font-name button').click()
-    await page.getByRole('button', { name: '从图片找字体（Preview）…', exact: true }).click()
+    await page.getByRole('button', { name: '从图片找字体（预览版）…', exact: true }).click()
     await page.getByRole('button', { name: '从文档选取图片', exact: true }).click()
     await page.locator('.font-picker-gallery button').click()
     await page.getByRole('button', { name: '识别字体', exact: true }).click()

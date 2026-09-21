@@ -89,13 +89,13 @@ export async function saveRehearseTimings(ctx: ActionCtx): Promise<void> {
 }
 
 /** Presenter view (single-window version, entry aligned with the show) */
-export function startPresenterView(ctx: ActionCtx, fromStart: boolean): void {
+export function startPresenterView(ctx: ActionCtx, fromStart: boolean, follow = false): void {
   if (ctx.slides.length === 0 || ctx.slideShow || ctx.presenter) return
   dropShowCurtain()
   ctx.setEditing(null)
   ctx.setCtxMenu(null)
   const first = ctx.slides.findIndex((s) => !s.hidden)
-  ctx.setPresenter({ startAt: fromStart ? Math.max(0, first) : ctx.current })
+  ctx.setPresenter({ startAt: fromStart ? Math.max(0, first) : ctx.current, follow })
 }
 
 export function exitPresenterView(ctx: ActionCtx, lastIndex: number): void {

@@ -255,7 +255,7 @@ test('Image Lab live service removes a real photo background and saves transpare
       button: 'right',
     })
     await page
-      .getByRole('button', { name: /去除背景（Preview）/, exact: true })
+      .getByRole('button', { name: /去除背景（预览版）/, exact: true })
       .last()
       .click()
     const dialog = page.locator('.image-lab-dialog')
